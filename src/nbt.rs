@@ -1,6 +1,7 @@
 use std::fmt;
 use crate::{DeserializeResult, DeserializeErr, Deserialized};
 use crate::utils::{read_short, take, read_int, read_long, read_one_byte, write_long, write_int, write_short};
+use crate::protocol::TestRandom;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct NamedTag {
@@ -17,6 +18,16 @@ impl NamedTag {
         match self.payload {
             Tag::End => true,
             _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for NamedTag {
+    fn test_gen_random() -> Self {
+        Self {
+            name: String::test_gen_random(),
+            payload: Tag::test_gen_random(),
         }
     }
 }
@@ -100,6 +111,50 @@ impl Tag {
             Tag::IntArray(v) => f.write_fmt(format_args!("[{} ints]", v.len())),
             Tag::LongArray(v) => f.write_fmt(format_args!("[{} longs]", v.len())),
             Tag::End => f.write_str("END"),
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for Tag {
+    fn test_gen_random() -> Self {
+        let random_idx = rand::random::<usize>() % 8;
+        match random_idx {
+            0 => Tag::Byte(i8::test_gen_random()),
+            1 => Tag::Short(i16::test_gen_random()),
+            2 => Tag::Int(i32::test_gen_random()),
+            3 => Tag::Long(i64::test_gen_random()),
+            4 => Tag::Float(f32::test_gen_random()),
+            5 => Tag::Double(f64::test_gen_random()),
+            6 => Tag::String(String::test_gen_random()),
+            7 => Tag::List({
+                let count = rand::random::<usize>() % 256;
+                let mut out = Vec::with_capacity(count);
+                let random_idx = rand::random::<usize>() % 6;
+                for _ in 0..count {
+                    out.push(match random_idx {
+                        0 => Tag::Byte(i8::test_gen_random()),
+                        1 => Tag::Short(i16::test_gen_random()),
+                        2 => Tag::Int(i32::test_gen_random()),
+                        3 => Tag::Long(i64::test_gen_random()),
+                        4 => Tag::Float(f32::test_gen_random()),
+                        5 => Tag::Double(f64::test_gen_random()),
+                        6 => Tag::String(String::test_gen_random()),
+                        other => panic!("impossible {}", other)
+                    });
+                }
+
+                out
+            }),
+            8 => Tag::Compound({
+                let count = rand::random::<usize>() % 256;
+                let mut out = Vec::with_capacity(count);
+                for _ in 0..count {
+                    out.push(NamedTag::test_gen_random());
+                }
+                out
+            }),
+            other => panic!("impossible {}", other),
         }
     }
 }
@@ -466,7 +521,7 @@ mod tests {
         let (unzipped, result) = read_bigtest_with_bytes();
         let serialized = result.bytes();
         assert_eq!(unzipped, serialized);
-        let Deserialized{value: unserialized, data: _} = NamedTag::root_compound_tag_from_bytes(serialized.as_slice()).expect("deserialize serialized nbt");
+        let Deserialized { value: unserialized, data: _ } = NamedTag::root_compound_tag_from_bytes(serialized.as_slice()).expect("deserialize serialized nbt");
         assert_eq!(unserialized, result);
     }
 
@@ -477,7 +532,7 @@ mod tests {
         )).with_name("test");
 
         let bytes = original.bytes();
-        let Deserialized{value: unserialized, data: _} = NamedTag::root_compound_tag_from_bytes(bytes.as_slice()).expect("deserialize int array");
+        let Deserialized { value: unserialized, data: _ } = NamedTag::root_compound_tag_from_bytes(bytes.as_slice()).expect("deserialize int array");
         assert_eq!(original, unserialized);
     }
 
@@ -488,7 +543,7 @@ mod tests {
         )).with_name("test");
 
         let bytes = original.bytes();
-        let Deserialized{value: unserialized, data: _} = NamedTag::root_compound_tag_from_bytes(bytes.as_slice()).expect("deserialize int array");
+        let Deserialized { value: unserialized, data: _ } = NamedTag::root_compound_tag_from_bytes(bytes.as_slice()).expect("deserialize int array");
         assert_eq!(original, unserialized);
     }
 
@@ -504,7 +559,7 @@ mod tests {
 
     fn read_bigtest_with_bytes() -> (Vec<u8>, NamedTag) {
         let unzipped = read_compressed_file("src/testdata/bigtest.nbt").expect("read nbt data");
-        let Deserialized{value: result, data: rest} = NamedTag::root_compound_tag_from_bytes(unzipped.as_slice()).expect("deserialize nbt");
+        let Deserialized { value: result, data: rest } = NamedTag::root_compound_tag_from_bytes(unzipped.as_slice()).expect("deserialize nbt");
         assert_eq!(rest.len(), 0);
 
         (unzipped, result)

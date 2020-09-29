@@ -3,6 +3,7 @@ use crate::{SerializeResult, SerializeErr, Serialize as McSerialize, Deserialize
 use crate::uuid::UUID4;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use std::fmt;
+use crate::protocol::TestRandom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct StatusSpec {
@@ -28,6 +29,26 @@ impl McDeserialize for StatusSpec {
                 DeserializeErr::CannotUnderstandValue(format!("failed to deserialize json status {}", err))
             })
         })
+    }
+}
+
+
+#[cfg(test)]
+impl TestRandom for StatusSpec {
+    fn test_gen_random() -> Self {
+        Self {
+            version: StatusVersionSpec{
+                protocol: rand::random(),
+                name: String::test_gen_random(),
+            },
+            players: StatusPlayersSpec{
+                sample: Vec::default(),
+                max: rand::random(),
+                online: rand::random(),
+            },
+            favicon: None,
+            description: Chat::test_gen_random(),
+        }
     }
 }
 

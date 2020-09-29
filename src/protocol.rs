@@ -13,6 +13,7 @@ pub struct ProtocolPacketSpec {
     pub direction: String,
     pub id: i32,
     pub name: String,
+    pub body_struct: String,
     pub fields: Vec<ProtocolPacketField>,
 }
 
@@ -35,7 +36,7 @@ pub trait Packet<I: PacketIdentifier>: Serialize {
 #[derive(Debug)]
 pub enum PacketErr {
     UnknownId(i32),
-    DeserializeFailed(DeserializeErr)
+    DeserializeFailed(DeserializeErr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,6 +48,11 @@ pub struct RawPacket<I> {
 pub trait ProtocolType: Serialize + Deserialize {}
 
 impl<T: Serialize + Deserialize> ProtocolType for T {}
+
+#[cfg(test)]
+pub trait TestRandom {
+    fn test_gen_random() -> Self;
+}
 
 #[macro_export]
 macro_rules! as_item {
@@ -82,6 +88,13 @@ macro_rules! __protocol_body_def_helper {
                 Deserialized::ok(Self::default(), data)
             }
         }
+
+        #[cfg(test)]
+        impl TestRandom for $bodyt {
+            fn test_gen_random() -> Self {
+                Self::default()
+            }
+        }
     };
     ($bodyt: ident { $($fname: ident: $ftyp: ty ),+ }) => {
         $crate::as_item! {
@@ -105,6 +118,13 @@ macro_rules! __protocol_body_def_helper {
                 $(let Deserialized{ value: $fname, data: _rest } = <$ftyp>::mc_deserialize(_rest)?;)+
 
                 Deserialized::ok(Self{ $($fname),+ }, _rest)
+            }
+        }
+
+        #[cfg(test)]
+        impl TestRandom for $bodyt {
+            fn test_gen_random() -> Self {
+                Self{ $($fname: <$ftyp>::test_gen_random()),+ }
             }
         }
     }
@@ -189,6 +209,7 @@ macro_rules! define_protocol {
                             direction: stringify!($direction).to_owned(),
                             id: $id,
                             name: stringify!($nam).to_owned(),
+                            body_struct: stringify!($body).to_owned(),
                             fields: vec!(
                                 $(crate::protocol::ProtocolPacketField{
                                     name: stringify!($fnam).to_owned(),
@@ -203,6 +224,13 @@ macro_rules! define_protocol {
 
         $($crate::__protocol_body_def_helper!($body { $($fnam: $ftyp),* });)*
     };
+}
+
+#[macro_export]
+macro_rules! count_num {
+    () => { 0 };
+    ($item: tt) => { 1 };
+    ($item: tt, $($rest: tt),+) => { 1 + count_num!($($rest),+) }
 }
 
 #[macro_export]
@@ -274,6 +302,20 @@ macro_rules! proto_enum_with_type {
                 (*self).into()
             }
         }
+
+        #[cfg(test)]
+        impl TestRandom for $typname {
+            fn test_gen_random() -> Self {
+                let mut idx: usize = (rand::random::<usize>() % (count_num!($($bval),+))) + 1;
+                $(
+                    idx -= 1;
+                    if idx == 0 {
+                        return $typname::$nam;
+                    }
+                )+
+                panic!("cannot generate random {}", stringify!($typname));
+            }
+        }
     }
 }
 
@@ -343,6 +385,81 @@ macro_rules! proto_byte_flag {
         impl Deserialize for $typname {
             fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
                 Ok(u8::mc_deserialize(data)?.map(move |b| $typname(b)))
+            }
+        }
+
+        #[cfg(test)]
+        impl TestRandom for $typname {
+            fn test_gen_random() -> Self {
+                let mut out = <$typname>::default();
+                $(paste::paste! {
+                    out.[<set_ $nam>](rand::random::<bool>());
+                })+
+                out
+            }
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! counted_array_type {
+    ($name: ident, $countert: ty, $tousize_fn: ident, $fromusize_fn: ident) => {
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct $name<T> where T: Debug + Clone + PartialEq {
+            pub data: Vec<T>
+        }
+
+        impl<T> Serialize for $name<T> where T: Serialize + Debug + Clone + PartialEq {
+            fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                let count: $countert = $fromusize_fn(self.data.len());
+                to.serialize_other(&count)?;
+
+                for entry in &self.data {
+                    to.serialize_other(entry)?;
+                }
+
+                Ok(())
+            }
+        }
+
+        impl<T> Deserialize for $name<T> where T: Deserialize + Debug + Clone + PartialEq {
+            fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+                let Deserialized{value: raw_count, mut data} = <$countert>::mc_deserialize(data)?;
+                let count: usize = $tousize_fn(raw_count);
+
+                let mut out = Vec::with_capacity(count);
+                for _ in 0..count {
+                    let Deserialized{value: next, data: rest} = T::mc_deserialize(data)?;
+                    data = rest;
+                    out.push(next);
+                }
+
+                Deserialized::ok(Self { data: out }, data)
+            }
+        }
+
+        impl<T> Into<Vec<T>> for $name<T> where T: Debug + Clone + PartialEq {
+            fn into(self) -> Vec<T> {
+                self.data
+            }
+        }
+
+        impl<T> From<Vec<T>> for $name<T> where T: Debug + Clone + PartialEq {
+            fn from(data: Vec<T>) -> Self {
+                Self { data }
+            }
+        }
+
+        #[cfg(test)]
+        impl<T> TestRandom for $name<T> where T: TestRandom + Debug + Clone + PartialEq {
+            fn test_gen_random() -> Self {
+                let elem_count: usize = rand::random::<usize>() % 32;
+                let mut out = Vec::with_capacity(elem_count);
+                for _ in 0..elem_count {
+                    out.push(T::test_gen_random());
+                }
+
+                Self { data: out }
             }
         }
     }

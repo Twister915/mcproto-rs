@@ -4,6 +4,9 @@ use crate::*;
 use crate::utils::*;
 use crate::uuid::UUID4;
 
+#[cfg(test)]
+use crate::protocol::TestRandom;
+
 // bool
 impl Serialize for bool {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -23,6 +26,13 @@ impl Deserialize for bool {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for bool {
+    fn test_gen_random() -> Self {
+        rand::random()
+    }
+}
+
 // u8
 impl Serialize for u8 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -36,6 +46,13 @@ impl Deserialize for u8 {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for u8 {
+    fn test_gen_random() -> Self {
+        rand::random()
+    }
+}
+
 // i8
 impl Serialize for i8 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -46,6 +63,13 @@ impl Serialize for i8 {
 impl Deserialize for i8 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         Ok(read_one_byte(data)?.map(move |byte| byte as i8))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for i8 {
+    fn test_gen_random() -> Self {
+        rand::random()
     }
 }
 
@@ -63,6 +87,13 @@ impl Deserialize for u16 {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for u16 {
+    fn test_gen_random() -> Self {
+        rand::random()
+    }
+}
+
 // i16
 impl Serialize for i16 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -73,6 +104,13 @@ impl Serialize for i16 {
 impl Deserialize for i16 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         u16::mc_deserialize(data)?.map(move |other| other as i16).into()
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for i16 {
+    fn test_gen_random() -> Self {
+        rand::random()
     }
 }
 
@@ -90,6 +128,13 @@ impl Deserialize for i32 {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for i32 {
+    fn test_gen_random() -> Self {
+        rand::random()
+    }
+}
+
 // long
 impl Serialize for i64 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -101,6 +146,13 @@ impl Serialize for i64 {
 impl Deserialize for i64 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         Ok(read_long(data)?.map(move |v| v as i64))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for i64 {
+    fn test_gen_random() -> Self {
+        rand::random()
     }
 }
 
@@ -120,6 +172,13 @@ impl Deserialize for f32 {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for f32 {
+    fn test_gen_random() -> Self {
+        rand::random()
+    }
+}
+
 // double
 impl Serialize for f64 {
     //noinspection ALL
@@ -132,6 +191,13 @@ impl Serialize for f64 {
 impl Deserialize for f64 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         i64::mc_deserialize(data)?.map(move |r| f64::from_bits(r as u64)).into()
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for f64 {
+    fn test_gen_random() -> Self {
+        rand::random()
     }
 }
 
@@ -188,6 +254,14 @@ impl std::fmt::Display for VarInt {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for VarInt {
+    fn test_gen_random() -> Self {
+        let out: i32 = rand::random();
+        Self(out)
+    }
+}
+
 #[derive(Copy, Clone, PartialOrd, PartialEq, Debug, Default, Hash, Ord, Eq)]
 pub struct VarLong(pub i64);
 
@@ -201,6 +275,14 @@ impl Serialize for VarLong {
 impl Deserialize for VarLong {
     fn mc_deserialize(orig_data: &[u8]) -> DeserializeResult<'_, Self> {
         Ok(DESERIALIZE_VAR_LONG(orig_data)?.map(move |v| VarLong(v as i64)))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for VarLong {
+    fn test_gen_random() -> Self {
+        let out: i64 = rand::random();
+        Self(out)
     }
 }
 
@@ -274,6 +356,28 @@ impl Deserialize for String {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for String {
+    fn test_gen_random() -> Self {
+        let raw_len: u8 = rand::random();
+        let len = raw_len as usize;
+        let mut out = String::with_capacity(len);
+        for _ in 0..len {
+            let c_idx: u8 = rand::random::<u8>() % 36;
+
+            let c = if c_idx <= 10 {
+                (48 + c_idx) as char
+            } else {
+                ((c_idx - 10) + 65) as char
+            };
+
+            out.push(c)
+        }
+
+        out
+    }
+}
+
 // position
 #[derive(Clone, Copy, PartialEq, Hash, Debug)]
 pub struct IntPosition {
@@ -335,6 +439,20 @@ impl Deserialize for IntPosition {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for IntPosition {
+    fn test_gen_random() -> Self {
+        let x: i32 = ((rand::random::<u32>() % (1 << 26)) as i32) - (1 << 25);
+        let z: i32 = ((rand::random::<u32>() % (1 << 26)) as i32) - (1 << 25);
+        let y: i16 = ((rand::random::<u16>() % (1 << 12)) as i16) - (1 << 11);
+        Self{
+            x,
+            y,
+            z
+        }
+    }
+}
+
 // angle
 #[derive(Copy, Clone, PartialEq, Hash, Debug)]
 pub struct Angle {
@@ -352,6 +470,15 @@ impl Deserialize for Angle {
         Ok(read_one_byte(data)?.map(move |b| {
             Angle { value: b }
         }))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for Angle {
+    fn test_gen_random() -> Self {
+        Self{
+            value: rand::random()
+        }
     }
 }
 
@@ -388,6 +515,13 @@ impl Deserialize for UUID4 {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for UUID4 {
+    fn test_gen_random() -> Self {
+        UUID4::random()
+    }
+}
+
 // NBT
 
 #[derive(Clone, PartialEq, Debug)]
@@ -420,6 +554,13 @@ impl Into<nbt::NamedTag> for NamedNbtTag {
     }
 }
 
+#[cfg(test)]
+impl TestRandom for NamedNbtTag {
+    fn test_gen_random() -> Self {
+        Self { root: nbt::NamedTag::test_gen_random() }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FixedInt {
     raw: i32
@@ -446,6 +587,13 @@ impl FixedInt {
 
     pub fn into_float(self, fractional_bytes: usize) -> f64 {
         (self.raw as f64) / ((1 << fractional_bytes) as f64)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for FixedInt {
+    fn test_gen_random() -> Self {
+        FixedInt::new(f64::test_gen_random(), 16)
     }
 }
 
@@ -704,6 +852,19 @@ impl Chat {
             to.push(formatter)
         }
     }
+
+    pub fn from_text(text: &str) -> Chat {
+        Chat{
+            text: text.to_owned(),
+            bold: None,
+            italic: None,
+            underlined: None,
+            strikethrough: None,
+            obfuscated: None,
+            color: None,
+            extra: None,
+        }
+    }
 }
 
 impl Serialize for Chat {
@@ -721,6 +882,14 @@ impl Deserialize for Chat {
                 DeserializeErr::FailedJsonDeserialize(format!("failed to deserialize chat {:?}", err))
             })
         })
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for Chat {
+    fn test_gen_random() -> Self {
+        let str = String::test_gen_random();
+        Chat::from_text(str.as_str())
     }
 }
 
@@ -774,6 +943,18 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
     }
 }
 
+#[cfg(test)]
+impl<T> TestRandom for Option<T> where T: TestRandom {
+    fn test_gen_random() -> Self {
+        let is_present: bool = rand::random();
+        if is_present {
+            Some(T::test_gen_random())
+        } else {
+            None
+        }
+    }
+}
+
 // SLOT
 #[derive(Debug, PartialEq, Clone)]
 pub struct Slot {
@@ -809,6 +990,21 @@ impl Deserialize for Slot {
         }.map(move |nbt| {
             Slot{ item_id, item_count, nbt }
         }))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for Slot {
+    fn test_gen_random() -> Self {
+        let item_id = VarInt::test_gen_random();
+        let item_count = i8::test_gen_random() % 65;
+        let nbt = <Option<nbt::NamedTag>>::test_gen_random();
+
+        Self{
+            item_id,
+            item_count,
+            nbt
+        }
     }
 }
 
