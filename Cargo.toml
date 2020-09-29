@@ -1,0 +1,20 @@
+[package]
+name = "mc-proto-rs"
+version = "0.1.0"
+authors = ["Joey Sacchini <joey@sacchini.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "1.0"
+regex = "1"
+lazy_static = "1.4"
+rand = "0.7"
+flate2 = "1.0.17"
+base64 = "0.12.3"
+paste = "1.0.1"
+
+[dependencies.serde]
+version = "1.0.116"
+features = [ "derive" ]
