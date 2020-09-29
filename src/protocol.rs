@@ -1,4 +1,4 @@
-use crate::{Serialize, Deserialize, DeserializeErr};
+use crate::{Deserialize, DeserializeErr, Serialize};
 use std::fmt::Debug;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -56,7 +56,9 @@ pub trait TestRandom {
 
 #[macro_export]
 macro_rules! as_item {
-    ($i:item) => { $i };
+    ($i:item) => {
+        $i
+    };
 }
 
 #[macro_export]
@@ -405,11 +407,17 @@ macro_rules! proto_byte_flag {
 macro_rules! counted_array_type {
     ($name: ident, $countert: ty, $tousize_fn: ident, $fromusize_fn: ident) => {
         #[derive(Debug, Clone, PartialEq)]
-        pub struct $name<T> where T: Debug + Clone + PartialEq {
-            pub data: Vec<T>
+        pub struct $name<T>
+        where
+            T: Debug + Clone + PartialEq,
+        {
+            pub data: Vec<T>,
         }
 
-        impl<T> Serialize for $name<T> where T: Serialize + Debug + Clone + PartialEq {
+        impl<T> Serialize for $name<T>
+        where
+            T: Serialize + Debug + Clone + PartialEq,
+        {
             fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
                 let count: $countert = $fromusize_fn(self.data.len());
                 to.serialize_other(&count)?;
@@ -422,14 +430,23 @@ macro_rules! counted_array_type {
             }
         }
 
-        impl<T> Deserialize for $name<T> where T: Deserialize + Debug + Clone + PartialEq {
+        impl<T> Deserialize for $name<T>
+        where
+            T: Deserialize + Debug + Clone + PartialEq,
+        {
             fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-                let Deserialized{value: raw_count, mut data} = <$countert>::mc_deserialize(data)?;
+                let Deserialized {
+                    value: raw_count,
+                    mut data,
+                } = <$countert>::mc_deserialize(data)?;
                 let count: usize = $tousize_fn(raw_count);
 
                 let mut out = Vec::with_capacity(count);
                 for _ in 0..count {
-                    let Deserialized{value: next, data: rest} = T::mc_deserialize(data)?;
+                    let Deserialized {
+                        value: next,
+                        data: rest,
+                    } = T::mc_deserialize(data)?;
                     data = rest;
                     out.push(next);
                 }
@@ -438,20 +455,29 @@ macro_rules! counted_array_type {
             }
         }
 
-        impl<T> Into<Vec<T>> for $name<T> where T: Debug + Clone + PartialEq {
+        impl<T> Into<Vec<T>> for $name<T>
+        where
+            T: Debug + Clone + PartialEq,
+        {
             fn into(self) -> Vec<T> {
                 self.data
             }
         }
 
-        impl<T> From<Vec<T>> for $name<T> where T: Debug + Clone + PartialEq {
+        impl<T> From<Vec<T>> for $name<T>
+        where
+            T: Debug + Clone + PartialEq,
+        {
             fn from(data: Vec<T>) -> Self {
                 Self { data }
             }
         }
 
         #[cfg(test)]
-        impl<T> TestRandom for $name<T> where T: TestRandom + Debug + Clone + PartialEq {
+        impl<T> TestRandom for $name<T>
+        where
+            T: TestRandom + Debug + Clone + PartialEq,
+        {
             fn test_gen_random() -> Self {
                 let elem_count: usize = rand::random::<usize>() % 32;
                 let mut out = Vec::with_capacity(elem_count);
@@ -462,5 +488,5 @@ macro_rules! counted_array_type {
                 Self { data: out }
             }
         }
-    }
+    };
 }

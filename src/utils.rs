@@ -1,10 +1,10 @@
-use crate::{DeserializeResult, DeserializeErr, Deserialized};
+use crate::{DeserializeErr, DeserializeResult, Deserialized};
 
 #[inline]
 pub fn read_one_byte(data: &[u8]) -> DeserializeResult<u8> {
     match data.split_first() {
         Some((byte, rest)) => Deserialized::ok(*byte, rest),
-        None => Err(DeserializeErr::Eof)
+        None => Err(DeserializeErr::Eof),
     }
 }
 
@@ -22,14 +22,14 @@ pub const fn take(amount: usize) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResu
 #[inline]
 pub fn read_long(data: &[u8]) -> DeserializeResult<u64> {
     Ok(take(8)(data)?.map(move |bytes| {
-        (bytes[0] as u64) << 56 |
-            (bytes[1] as u64) << 48 |
-            (bytes[2] as u64) << 40 |
-            (bytes[3] as u64) << 32 |
-            (bytes[4] as u64) << 24 |
-            (bytes[5] as u64) << 16 |
-            (bytes[6] as u64) << 8 |
-            (bytes[7] as u64)
+        (bytes[0] as u64) << 56
+            | (bytes[1] as u64) << 48
+            | (bytes[2] as u64) << 40
+            | (bytes[3] as u64) << 32
+            | (bytes[4] as u64) << 24
+            | (bytes[5] as u64) << 16
+            | (bytes[6] as u64) << 8
+            | (bytes[7] as u64)
     }))
 }
 
@@ -50,10 +50,10 @@ pub fn write_long(v: u64) -> [u8; 8] {
 #[inline]
 pub fn read_int(data: &[u8]) -> DeserializeResult<u32> {
     Ok(take(4)(data)?.map(move |bytes| {
-        (bytes[0] as u32) << 24 |
-            (bytes[1] as u32) << 16 |
-            (bytes[2] as u32) << 8 |
-            (bytes[3] as u32)
+        (bytes[0] as u32) << 24
+            | (bytes[1] as u32) << 16
+            | (bytes[2] as u32) << 8
+            | (bytes[3] as u32)
     }))
 }
 
@@ -64,9 +64,7 @@ pub fn write_int(v: u32) -> [u8; 4] {
 
 #[inline]
 pub fn read_short(data: &[u8]) -> DeserializeResult<u16> {
-    Ok(take(2)(data)?.map(move |bytes| {
-        (bytes[0] as u16) << 8 | (bytes[1] as u16)
-    }))
+    Ok(take(2)(data)?.map(move |bytes| (bytes[0] as u16) << 8 | (bytes[1] as u16)))
 }
 
 #[inline]

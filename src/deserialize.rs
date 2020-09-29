@@ -12,7 +12,7 @@ pub enum DeserializeErr {
     NbtBadLength(isize),
     NbtInvalidStartTag(u8),
     CannotUnderstandValue(String),
-    FailedJsonDeserialize(String)
+    FailedJsonDeserialize(String),
 }
 
 impl<'b, R> Into<DeserializeResult<'b, R>> for DeserializeErr {
@@ -37,10 +37,7 @@ impl<'b, R> Into<DeserializeResult<'b, R>> for Deserialized<'b, R> {
 impl<'b, R> Deserialized<'b, R> {
     #[inline]
     pub fn create(value: R, data: &'b [u8]) -> Self {
-        Deserialized {
-            value,
-            data,
-        }
+        Deserialized { value, data }
     }
 
     #[inline]
@@ -50,56 +47,54 @@ impl<'b, R> Deserialized<'b, R> {
 
     #[inline]
     pub fn replace<T>(self, other: T) -> Deserialized<'b, T> {
-        Deserialized{
+        Deserialized {
             value: other,
             data: self.data,
         }
     }
 
     #[inline]
-    pub fn map<F, T>(self, f: F) -> Deserialized<'b, T> where F: FnOnce(R) -> T {
-        Deserialized{
+    pub fn map<F, T>(self, f: F) -> Deserialized<'b, T>
+    where
+        F: FnOnce(R) -> T,
+    {
+        Deserialized {
             value: f(self.value),
             data: self.data,
         }
     }
 
     #[inline]
-    pub fn try_map<F, T>(self, f: F) -> DeserializeResult<'b, T> where
-        F: FnOnce(R) -> Result<T, DeserializeErr>
+    pub fn try_map<F, T>(self, f: F) -> DeserializeResult<'b, T>
+    where
+        F: FnOnce(R) -> Result<T, DeserializeErr>,
     {
         match f(self.value) {
-            Ok(new_value) => Ok(Deserialized{
+            Ok(new_value) => Ok(Deserialized {
                 value: new_value,
                 data: self.data,
             }),
-            Err(err) => Err(err)
+            Err(err) => Err(err),
         }
     }
 
     #[inline]
-    pub fn and_then<F, T>(self, f: F) -> DeserializeResult<'b, T> where
-        F: FnOnce(R, &'b[u8]) -> DeserializeResult<'b, T>
+    pub fn and_then<F, T>(self, f: F) -> DeserializeResult<'b, T>
+    where
+        F: FnOnce(R, &'b [u8]) -> DeserializeResult<'b, T>,
     {
         f(self.value, self.data)
     }
 }
 
-
 impl<'b, R> From<(R, &'b [u8])> for Deserialized<'b, R> {
     fn from(v: (R, &'b [u8])) -> Self {
         let (value, data) = v;
-        Deserialized {
-            value,
-            data,
-        }
+        Deserialized { value, data }
     }
 }
 
-pub type DeserializeResult<'b, R>
-= Result<
-    Deserialized<'b, R>,
-    DeserializeErr>;
+pub type DeserializeResult<'b, R> = Result<Deserialized<'b, R>, DeserializeErr>;
 
 pub trait Deserialize: Sized {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<Self>;

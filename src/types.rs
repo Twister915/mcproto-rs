@@ -1,8 +1,8 @@
 // ... PRIMITIVE TYPES ...
 
-use crate::*;
 use crate::utils::*;
 use crate::uuid::UUID4;
+use crate::*;
 
 #[cfg(test)]
 use crate::protocol::TestRandom;
@@ -16,12 +16,10 @@ impl Serialize for bool {
 
 impl Deserialize for bool {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        read_one_byte(data)?.try_map(move |b| {
-            match b {
-                0x00 => Ok(false),
-                0x01 => Ok(true),
-                other => Err(DeserializeErr::InvalidBool(other))
-            }
+        read_one_byte(data)?.try_map(move |b| match b {
+            0x00 => Ok(false),
+            0x01 => Ok(true),
+            other => Err(DeserializeErr::InvalidBool(other)),
         })
     }
 }
@@ -103,7 +101,9 @@ impl Serialize for i16 {
 
 impl Deserialize for i16 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        u16::mc_deserialize(data)?.map(move |other| other as i16).into()
+        u16::mc_deserialize(data)?
+            .map(move |other| other as i16)
+            .into()
     }
 }
 
@@ -158,7 +158,6 @@ impl TestRandom for i64 {
 
 // float
 impl Serialize for f32 {
-
     //noinspection ALL
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         let data = (*self).to_be_bytes();
@@ -168,7 +167,9 @@ impl Serialize for f32 {
 
 impl Deserialize for f32 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        i32::mc_deserialize(data)?.map(move |r| f32::from_bits(r as u32)).into()
+        i32::mc_deserialize(data)?
+            .map(move |r| f32::from_bits(r as u32))
+            .into()
     }
 }
 
@@ -190,7 +191,9 @@ impl Serialize for f64 {
 
 impl Deserialize for f64 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        i64::mc_deserialize(data)?.map(move |r| f64::from_bits(r as u64)).into()
+        i64::mc_deserialize(data)?
+            .map(move |r| f64::from_bits(r as u64))
+            .into()
     }
 }
 
@@ -205,8 +208,10 @@ impl TestRandom for f64 {
 const VAR_INT_BYTES: usize = 5;
 const VAR_LONG_BYTES: usize = 10;
 
-const DESERIALIZE_VAR_INT: impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> = deserialize_var_num(VAR_INT_BYTES);
-const DESERIALIZE_VAR_LONG: impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> = deserialize_var_num(VAR_LONG_BYTES);
+const DESERIALIZE_VAR_INT: impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> =
+    deserialize_var_num(VAR_INT_BYTES);
+const DESERIALIZE_VAR_LONG: impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> =
+    deserialize_var_num(VAR_LONG_BYTES);
 
 #[derive(Copy, Clone, PartialOrd, PartialEq, Debug, Default, Hash, Ord, Eq)]
 pub struct VarInt(pub i32);
@@ -309,7 +314,9 @@ fn serialize_var_num(data: u64, out: &mut [u8]) -> &[u8] {
     &out[..byte_idx]
 }
 
-const fn deserialize_var_num(max_bytes: usize) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> {
+const fn deserialize_var_num(
+    max_bytes: usize,
+) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> {
     move |orig_data| {
         let mut data = orig_data;
         let mut v: u64 = 0;
@@ -321,7 +328,10 @@ const fn deserialize_var_num(max_bytes: usize) -> impl for<'b> Fn(&'b [u8]) -> D
             if i == max_bytes {
                 return DeserializeErr::VarNumTooLong(Vec::from(&orig_data[..i])).into();
             }
-            let Deserialized { value: byte, data: rest } = read_one_byte(data)?;
+            let Deserialized {
+                value: byte,
+                data: rest,
+            } = read_one_byte(data)?;
             data = rest;
             has_more = byte & 0x80 != 0;
             v |= ((byte as u64) & 0x7F) << bit_place;
@@ -348,8 +358,7 @@ impl Deserialize for String {
                 Err(DeserializeErr::NegativeLength(length))
             } else {
                 take(length.0 as usize)(rest)?.try_map(move |taken| {
-                    String::from_utf8(taken.to_vec())
-                        .map_err(DeserializeErr::BadStringEncoding)
+                    String::from_utf8(taken.to_vec()).map_err(DeserializeErr::BadStringEncoding)
                 })
             }
         })
@@ -412,13 +421,14 @@ impl Serialize for IntPosition {
 
 impl Deserialize for IntPosition {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized{ value: raw, data } = i64::mc_deserialize(data)?;
+        let Deserialized { value: raw, data } = i64::mc_deserialize(data)?;
         let raw_unsigned = raw as u64;
         let mut x = ((raw_unsigned >> 38) as u32) & 0x3FFFFFF;
         let mut z = ((raw_unsigned >> 12) & 0x3FFFFFF) as u32;
         let mut y = ((raw_unsigned & 0xFFF) as u16) & 0xFFF;
 
-        if (x & 0x2000000) != 0 { // is the 26th bit set
+        if (x & 0x2000000) != 0 {
+            // is the 26th bit set
             // if so, treat the rest as a positive integer, and treat 26th bit as -2^25
             // 2^25 == 0x2000000
             // 0x1FFFFFF == 2^26 - 1 (all places set to 1 except 26th place)
@@ -431,11 +441,14 @@ impl Deserialize for IntPosition {
             z = (((z & 0x1FFFFFF) as i32) - 0x2000000) as u32;
         }
 
-        Deserialized::ok(IntPosition{
-            x: x as i32,
-            y: y as i16,
-            z: z as i32
-        }, data)
+        Deserialized::ok(
+            IntPosition {
+                x: x as i32,
+                y: y as i16,
+                z: z as i32,
+            },
+            data,
+        )
     }
 }
 
@@ -445,18 +458,14 @@ impl TestRandom for IntPosition {
         let x: i32 = ((rand::random::<u32>() % (1 << 26)) as i32) - (1 << 25);
         let z: i32 = ((rand::random::<u32>() % (1 << 26)) as i32) - (1 << 25);
         let y: i16 = ((rand::random::<u16>() % (1 << 12)) as i16) - (1 << 11);
-        Self{
-            x,
-            y,
-            z
-        }
+        Self { x, y, z }
     }
 }
 
 // angle
 #[derive(Copy, Clone, PartialEq, Hash, Debug)]
 pub struct Angle {
-    pub value: u8
+    pub value: u8,
 }
 
 impl Serialize for Angle {
@@ -467,17 +476,15 @@ impl Serialize for Angle {
 
 impl Deserialize for Angle {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(read_one_byte(data)?.map(move |b| {
-            Angle { value: b }
-        }))
+        Ok(read_one_byte(data)?.map(move |b| Angle { value: b }))
     }
 }
 
 #[cfg(test)]
 impl TestRandom for Angle {
     fn test_gen_random() -> Self {
-        Self{
-            value: rand::random()
+        Self {
+            value: rand::random(),
         }
     }
 }
@@ -493,25 +500,27 @@ impl Serialize for UUID4 {
 
 impl Deserialize for UUID4 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        take(16)(data)?.map(move |bytes| {
-            let raw = (bytes[0] as u128) << 120 |
-                (bytes[1] as u128) << 112 |
-                (bytes[2] as u128) << 104 |
-                (bytes[3] as u128) << 96 |
-                (bytes[4] as u128) << 88 |
-                (bytes[5] as u128) << 80 |
-                (bytes[6] as u128) << 72 |
-                (bytes[7] as u128) << 64 |
-                (bytes[8] as u128) << 56 |
-                (bytes[9] as u128) << 48 |
-                (bytes[10] as u128) << 40 |
-                (bytes[11] as u128) << 32 |
-                (bytes[12] as u128) << 24 |
-                (bytes[13] as u128) << 16 |
-                (bytes[14] as u128) << 8 |
-                bytes[15] as u128;
-            UUID4::from(raw)
-        }).into()
+        take(16)(data)?
+            .map(move |bytes| {
+                let raw = (bytes[0] as u128) << 120
+                    | (bytes[1] as u128) << 112
+                    | (bytes[2] as u128) << 104
+                    | (bytes[3] as u128) << 96
+                    | (bytes[4] as u128) << 88
+                    | (bytes[5] as u128) << 80
+                    | (bytes[6] as u128) << 72
+                    | (bytes[7] as u128) << 64
+                    | (bytes[8] as u128) << 56
+                    | (bytes[9] as u128) << 48
+                    | (bytes[10] as u128) << 40
+                    | (bytes[11] as u128) << 32
+                    | (bytes[12] as u128) << 24
+                    | (bytes[13] as u128) << 16
+                    | (bytes[14] as u128) << 8
+                    | bytes[15] as u128;
+                UUID4::from(raw)
+            })
+            .into()
     }
 }
 
@@ -526,7 +535,7 @@ impl TestRandom for UUID4 {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct NamedNbtTag {
-    pub root: nbt::NamedTag
+    pub root: nbt::NamedTag,
 }
 
 impl Serialize for NamedNbtTag {
@@ -538,7 +547,10 @@ impl Serialize for NamedNbtTag {
 
 impl Deserialize for NamedNbtTag {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(nbt::NamedTag::root_compound_tag_from_bytes(data)?.map(move |root| NamedNbtTag { root }))
+        Ok(
+            nbt::NamedTag::root_compound_tag_from_bytes(data)?
+                .map(move |root| NamedNbtTag { root }),
+        )
     }
 }
 
@@ -557,13 +569,15 @@ impl Into<nbt::NamedTag> for NamedNbtTag {
 #[cfg(test)]
 impl TestRandom for NamedNbtTag {
     fn test_gen_random() -> Self {
-        Self { root: nbt::NamedTag::test_gen_random() }
+        Self {
+            root: nbt::NamedTag::test_gen_random(),
+        }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FixedInt {
-    raw: i32
+    raw: i32,
 }
 
 impl Serialize for FixedInt {
@@ -574,15 +588,15 @@ impl Serialize for FixedInt {
 
 impl Deserialize for FixedInt {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(i32::mc_deserialize(data)?.map(move |raw| {
-            FixedInt{ raw }
-        }))
+        Ok(i32::mc_deserialize(data)?.map(move |raw| FixedInt { raw }))
     }
 }
 
 impl FixedInt {
     pub fn new(data: f64, fractional_bytes: usize) -> Self {
-        Self { raw: (data * ((1 << fractional_bytes) as f64)) as i32 }
+        Self {
+            raw: (data * ((1 << fractional_bytes) as f64)) as i32,
+        }
     }
 
     pub fn into_float(self, fractional_bytes: usize) -> f64 {
@@ -614,12 +628,13 @@ pub struct Chat {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub extra: Option<Vec<Chat>>
+    pub extra: Option<Vec<Chat>>,
 }
 
 impl ToString for Chat {
     fn to_string(&self) -> String {
-        self.extra.as_ref()
+        self.extra
+            .as_ref()
             .into_iter()
             .flat_map(|v| v.into_iter())
             .map(|item| item.to_string())
@@ -646,7 +661,7 @@ pub enum ColorCode {
     Red,
     LightPurple,
     Yellow,
-    White
+    White,
 }
 
 impl ColorCode {
@@ -668,7 +683,7 @@ impl ColorCode {
             'd' => Some(ColorCode::LightPurple),
             'e' => Some(ColorCode::Yellow),
             'f' => Some(ColorCode::White),
-            _ => None
+            _ => None,
         }
     }
 
@@ -711,7 +726,7 @@ impl ColorCode {
             "light_purple" => Some(ColorCode::LightPurple),
             "yellow" => Some(ColorCode::Yellow),
             "white" => Some(ColorCode::White),
-            _ => None
+            _ => None,
         }
     }
 
@@ -745,7 +760,7 @@ pub enum Formatter {
     Strikethrough,
     Underline,
     Italic,
-    Reset
+    Reset,
 }
 
 impl Formatter {
@@ -757,7 +772,7 @@ impl Formatter {
             'n' => Some(Formatter::Underline),
             'o' => Some(Formatter::Italic),
             'r' => Some(Formatter::Reset),
-            _ => ColorCode::from_code(i).map(Formatter::Color)
+            _ => ColorCode::from_code(i).map(Formatter::Color),
         }
     }
 
@@ -769,7 +784,7 @@ impl Formatter {
             Formatter::Strikethrough => 'm',
             Formatter::Underline => 'n',
             Formatter::Italic => 'o',
-            Formatter::Reset => 'r'
+            Formatter::Reset => 'r',
         }
     }
 
@@ -781,7 +796,7 @@ impl Formatter {
             "underline" => Some(Formatter::Underline),
             "italic" => Some(Formatter::Italic),
             "reset" => Some(Formatter::Reset),
-            _ => ColorCode::from_name(name).map(Formatter::Color)
+            _ => ColorCode::from_name(name).map(Formatter::Color),
         }
     }
 
@@ -800,7 +815,7 @@ impl Formatter {
 
 impl ToString for Formatter {
     fn to_string(&self) -> String {
-        vec!(SECTION_SYMBOL, self.code()).into_iter().collect()
+        vec![SECTION_SYMBOL, self.code()].into_iter().collect()
     }
 }
 
@@ -809,15 +824,25 @@ impl Chat {
         self.to_traditional_parts(Vec::<Formatter>::new().as_ref(), None)
     }
 
-    fn to_traditional_parts(&self, formatters: &Vec<Formatter>, color: Option<ColorCode>) -> String {
+    fn to_traditional_parts(
+        &self,
+        formatters: &Vec<Formatter>,
+        color: Option<ColorCode>,
+    ) -> String {
         let mut own_formatters = formatters.clone();
         Self::update_formatter(&mut own_formatters, Formatter::Bold, &self.bold);
         Self::update_formatter(&mut own_formatters, Formatter::Italic, &self.italic);
         Self::update_formatter(&mut own_formatters, Formatter::Underline, &self.underlined);
-        Self::update_formatter(&mut own_formatters, Formatter::Strikethrough, &self.strikethrough);
+        Self::update_formatter(
+            &mut own_formatters,
+            Formatter::Strikethrough,
+            &self.strikethrough,
+        );
         Self::update_formatter(&mut own_formatters, Formatter::Obfuscated, &self.obfuscated);
 
-        let own_color_option = self.color.as_ref()
+        let own_color_option = self
+            .color
+            .as_ref()
             .map(String::as_str)
             .and_then(ColorCode::from_name)
             .or(color);
@@ -826,21 +851,21 @@ impl Chat {
             .map(Formatter::Color)
             .map(|f| f.to_string());
 
-        let own_formatter =
-            own_formatters
-                .clone()
-                .into_iter()
-                .map(|f| f.to_string())
-                .fold(String::new(), |acc, v| acc + v.as_str());
+        let own_formatter = own_formatters
+            .clone()
+            .into_iter()
+            .map(|f| f.to_string())
+            .fold(String::new(), |acc, v| acc + v.as_str());
 
         let own_color_str = match own_color {
             Some(v) => v,
-            None => String::new()
+            None => String::new(),
         };
 
-        let own_out = own_formatter +  own_color_str.as_str() + self.text.as_str();
+        let own_out = own_formatter + own_color_str.as_str() + self.text.as_str();
 
-        self.extra.as_ref()
+        self.extra
+            .as_ref()
             .into_iter()
             .flat_map(|v| v.into_iter())
             .map(|child| child.to_traditional_parts(&own_formatters, own_color_option))
@@ -854,7 +879,7 @@ impl Chat {
     }
 
     pub fn from_text(text: &str) -> Chat {
-        Chat{
+        Chat {
             text: text.to_owned(),
             bold: None,
             italic: None,
@@ -869,9 +894,11 @@ impl Chat {
 
 impl Serialize for Chat {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        serde_json::to_string(self).map_err(move |err| {
-            SerializeErr::FailedJsonEncode(format!("failed to serialize chat {:?}", err))
-        })?.mc_serialize(to)
+        serde_json::to_string(self)
+            .map_err(move |err| {
+                SerializeErr::FailedJsonEncode(format!("failed to serialize chat {:?}", err))
+            })?
+            .mc_serialize(to)
     }
 }
 
@@ -879,7 +906,10 @@ impl Deserialize for Chat {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         String::mc_deserialize(data)?.try_map(move |str| {
             serde_json::from_str(str.as_str()).map_err(move |err| {
-                DeserializeErr::FailedJsonDeserialize(format!("failed to deserialize chat {:?}", err))
+                DeserializeErr::FailedJsonDeserialize(format!(
+                    "failed to deserialize chat {:?}",
+                    err
+                ))
             })
         })
     }
@@ -895,7 +925,7 @@ impl TestRandom for Chat {
 
 #[derive(Default)]
 pub struct BytesSerializer {
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl Serializer for BytesSerializer {
@@ -907,7 +937,7 @@ impl Serializer for BytesSerializer {
 
 impl BytesSerializer {
     pub fn with_capacity(cap: usize) -> Self {
-        BytesSerializer{
+        BytesSerializer {
             data: Vec::with_capacity(cap),
         }
     }
@@ -917,21 +947,25 @@ impl BytesSerializer {
     }
 }
 
-impl<T> Serialize for Option<T> where T: Serialize {
+impl<T> Serialize for Option<T>
+where
+    T: Serialize,
+{
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         match self {
             Some(value) => {
                 to.serialize_other(&true)?;
                 to.serialize_other(value)
-            },
-            None => {
-                to.serialize_other(&false)
             }
+            None => to.serialize_other(&false),
         }
     }
 }
 
-impl<T> Deserialize for Option<T> where T: Deserialize {
+impl<T> Deserialize for Option<T>
+where
+    T: Deserialize,
+{
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         bool::mc_deserialize(data)?.and_then(move |is_present, data| {
             if is_present {
@@ -944,7 +978,10 @@ impl<T> Deserialize for Option<T> where T: Deserialize {
 }
 
 #[cfg(test)]
-impl<T> TestRandom for Option<T> where T: TestRandom {
+impl<T> TestRandom for Option<T>
+where
+    T: TestRandom,
+{
     fn test_gen_random() -> Self {
         let is_present: bool = rand::random();
         if is_present {
@@ -976,8 +1013,14 @@ impl Serialize for Slot {
 
 impl Deserialize for Slot {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized{ value: item_id, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized{ value: item_count, data } = i8::mc_deserialize(data)?;
+        let Deserialized {
+            value: item_id,
+            data,
+        } = VarInt::mc_deserialize(data)?;
+        let Deserialized {
+            value: item_count,
+            data,
+        } = i8::mc_deserialize(data)?;
         if data.is_empty() {
             return Err(DeserializeErr::Eof);
         }
@@ -985,10 +1028,16 @@ impl Deserialize for Slot {
         let id = data[0];
         let rest = &data[1..];
         Ok(match id {
-            0x00 => Deserialized{ value: None, data: rest },
-            _ => nbt::read_named_tag(data)?.map(move |tag| Some(tag))
-        }.map(move |nbt| {
-            Slot{ item_id, item_count, nbt }
+            0x00 => Deserialized {
+                value: None,
+                data: rest,
+            },
+            _ => nbt::read_named_tag(data)?.map(move |tag| Some(tag)),
+        }
+        .map(move |nbt| Slot {
+            item_id,
+            item_count,
+            nbt,
         }))
     }
 }
@@ -1000,10 +1049,10 @@ impl TestRandom for Slot {
         let item_count = i8::test_gen_random() % 65;
         let nbt = <Option<nbt::NamedTag>>::test_gen_random();
 
-        Self{
+        Self {
             item_id,
             item_count,
-            nbt
+            nbt,
         }
     }
 }
@@ -1112,62 +1161,61 @@ mod tests {
 
     #[test]
     fn test_nbt() {
-        test_type(NamedNbtTag {root: nbt::Tag::Compound(vec!(
-            nbt::Tag::String("test 123".to_owned()).with_name("abc 123")
-        )).with_name("root")})
+        test_type(NamedNbtTag {
+            root: nbt::Tag::Compound(vec![
+                nbt::Tag::String("test 123".to_owned()).with_name("abc 123")
+            ])
+            .with_name("root"),
+        })
     }
 
     #[test]
     fn test_int_position() {
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: 12312,
             y: -32,
             z: 321312,
         });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: 12312,
             y: -32,
             z: -321312,
         });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: -12312,
             y: -32,
             z: -321312,
         });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: -12312,
             y: 32,
             z: 321312,
         });
 
-        test_type(IntPosition{
-            x: 0,
-            y: 0,
-            z: 0,
-        });
+        test_type(IntPosition { x: 0, y: 0, z: 0 });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: 48,
             y: 232,
             z: 12,
         });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: 33554431,
             y: 2047,
             z: 33554431,
         });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: -33554432,
             y: -2048,
             z: -33554432,
         });
 
-        test_type(IntPosition{
+        test_type(IntPosition {
             x: 3,
             y: 0,
             z: 110655,
@@ -1183,34 +1231,38 @@ mod tests {
 
     #[test]
     fn test_angle() {
-        test_type(Angle{
-            value: 0,
-        });
-        test_type(Angle{
-            value: 24,
-        });
-        test_type(Angle{
-            value: 255,
-        });
-        test_type(Angle{
-            value: 8,
-        });
+        test_type(Angle { value: 0 });
+        test_type(Angle { value: 24 });
+        test_type(Angle { value: 255 });
+        test_type(Angle { value: 8 });
     }
 
     fn test_type<S: Serialize + Deserialize + PartialEq + Debug>(value: S) {
         let bytes = {
             let mut test = BytesSerializer::default();
-            value.mc_serialize(&mut test).expect("serialization should succeed");
+            value
+                .mc_serialize(&mut test)
+                .expect("serialization should succeed");
             test.into_bytes()
         };
-        let deserialized = S::mc_deserialize(bytes.as_slice()).expect("deserialization should succeed");
+        let deserialized =
+            S::mc_deserialize(bytes.as_slice()).expect("deserialization should succeed");
         assert!(deserialized.data.is_empty());
-        assert_eq!(deserialized.value, value, "deserialized value == serialized value");
+        assert_eq!(
+            deserialized.value, value,
+            "deserialized value == serialized value"
+        );
         let re_serialized = {
             let mut test = BytesSerializer::default();
-            deserialized.value.mc_serialize(&mut test).expect("serialization should succeed");
+            deserialized
+                .value
+                .mc_serialize(&mut test)
+                .expect("serialization should succeed");
             test.into_bytes()
         };
-        assert_eq!(re_serialized, bytes, "serialized value == original serialized bytes");
+        assert_eq!(
+            re_serialized, bytes,
+            "serialized value == original serialized bytes"
+        );
     }
 }

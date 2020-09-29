@@ -1,4 +1,4 @@
-use crate::{Serializer, SerializeResult};
+use crate::{SerializeResult, Serializer};
 #[cfg(test)]
 #[macro_export]
 macro_rules! packet_test_cases {
@@ -11,12 +11,13 @@ macro_rules! packet_test_cases {
                 packet.mc_serialize(&mut out).expect("serialize succeeds");
                 let bytes = out.into_bytes();
 
-                let raw_packet = RawPacket{
+                let raw_packet = RawPacket {
                     id: packet.id(),
                     data: bytes,
                 };
 
-                let deserialized = <$pnam>::mc_deserialize(raw_packet).expect("deserialize succeeds");
+                let deserialized =
+                    <$pnam>::mc_deserialize(raw_packet).expect("deserialize succeeds");
                 assert_eq!(packet, deserialized);
             }
         }
@@ -25,12 +26,16 @@ macro_rules! packet_test_cases {
         fn $benchnams(b: &mut Bencher) {
             let packet = $pnam::$varnam($bodnam::test_gen_random());
             let mut serializer = BenchSerializer::default();
-            packet.mc_serialize(&mut serializer).expect("serialize succeeds");
+            packet
+                .mc_serialize(&mut serializer)
+                .expect("serialize succeeds");
             b.bytes = serializer.len() as u64;
             serializer.reset();
 
             b.iter(|| {
-                packet.mc_serialize(&mut serializer).expect("serialize succeeds");
+                packet
+                    .mc_serialize(&mut serializer)
+                    .expect("serialize succeeds");
                 serializer.reset();
             })
         }
@@ -39,11 +44,13 @@ macro_rules! packet_test_cases {
         fn $benchnamd(b: &mut Bencher) {
             let packet = $pnam::$varnam($bodnam::test_gen_random());
             let mut serializer = BytesSerializer::default();
-            packet.mc_serialize(&mut serializer).expect("serialize succeeds");
+            packet
+                .mc_serialize(&mut serializer)
+                .expect("serialize succeeds");
 
             let bytes = serializer.into_bytes();
             b.bytes = bytes.len() as u64;
-            let raw_packet = RawPacket{
+            let raw_packet = RawPacket {
                 id: packet.id(),
                 data: bytes,
             };
@@ -51,13 +58,13 @@ macro_rules! packet_test_cases {
                 $pnam::mc_deserialize(raw_packet.clone()).expect("deserialize succeeds");
             })
         }
-    }
+    };
 }
 
 #[cfg(test)]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct BenchSerializer {
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 #[cfg(test)]

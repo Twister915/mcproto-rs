@@ -1,12 +1,12 @@
-use std::fmt::{Display, Formatter, Debug};
+use crate::utils::*;
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{Serializer, Deserializer};
-use crate::utils::*;
+use serde::{Deserializer, Serializer};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct UUID4 {
-    raw: u128
+    raw: u128,
 }
 
 impl Display for UUID4 {
@@ -25,22 +25,24 @@ impl Debug for UUID4 {
 
 impl From<u128> for UUID4 {
     fn from(raw: u128) -> Self {
-        UUID4 {
-            raw
-        }
+        UUID4 { raw }
     }
 }
 
 impl serde::Serialize for UUID4 {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
-        S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(self.to_string().as_str())
     }
 }
 
 impl<'de> serde::Deserialize<'de> for UUID4 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
-        D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+    where
+        D: Deserializer<'de>,
+    {
         struct Visitor;
         impl serde::de::Visitor<'_> for Visitor {
             type Value = UUID4;
@@ -53,12 +55,15 @@ impl<'de> serde::Deserialize<'de> for UUID4 {
                 if let Some(id) = UUID4::parse(v) {
                     Ok(id)
                 } else {
-                    Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self))
+                    Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(v),
+                        &self,
+                    ))
                 }
             }
         }
 
-        deserializer.deserialize_str(Visitor{})
+        deserializer.deserialize_str(Visitor {})
     }
 }
 
@@ -67,17 +72,23 @@ impl UUID4 {
         const PATTERN: &str = r"^([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})$";
         // let re = Regex::new(PATTERN).expect("regex is valid");
         lazy_static! {
-            static ref RE: Regex = Regex::new(PATTERN)
-                .expect("regex is valid");
+            static ref RE: Regex = Regex::new(PATTERN).expect("regex is valid");
         }
 
-        RE.captures_iter(from).filter_map(move |c|
-            c.get(1).map(move |g| g.as_str()).and_then(move |g0|
-                c.get(2).map(move |g| g.as_str()).and_then(move |g1|
-                    c.get(3).map(move |g| g.as_str()).and_then(move |g2|
-                        c.get(4).map(move |g| g.as_str()).and_then(move |g3|
-                            c.get(5).map(move |g4|
-                                RawUUID4 { parts: [g0, g1, g2, g3, g4.as_str()] }))))))
+        RE.captures_iter(from)
+            .filter_map(move |c| {
+                c.get(1).map(move |g| g.as_str()).and_then(move |g0| {
+                    c.get(2).map(move |g| g.as_str()).and_then(move |g1| {
+                        c.get(3).map(move |g| g.as_str()).and_then(move |g2| {
+                            c.get(4).map(move |g| g.as_str()).and_then(move |g3| {
+                                c.get(5).map(move |g4| RawUUID4 {
+                                    parts: [g0, g1, g2, g3, g4.as_str()],
+                                })
+                            })
+                        })
+                    })
+                })
+            })
             .nth(0)
             .and_then(move |raw| raw.parse())
     }
@@ -142,16 +153,14 @@ mod tests {
 
     #[test]
     fn test_uuid4_parse() {
-        UUID4::parse(VALID_UUID)
-            .expect("should parse valid uuid correctly");
+        UUID4::parse(VALID_UUID).expect("should parse valid uuid correctly");
     }
 
     #[test]
     fn test_parsed_uuid4_to_hex() {
-        let uuid_hex =
-            UUID4::parse(VALID_UUID)
-                .expect("should parse valid uuid correctly")
-                .hex();
+        let uuid_hex = UUID4::parse(VALID_UUID)
+            .expect("should parse valid uuid correctly")
+            .hex();
 
         assert_eq!(uuid_hex.as_str(), VALID_UUID)
     }
@@ -167,7 +176,8 @@ mod tests {
     fn test_random_uuid4_hex() {
         let src_uuid = UUID4::random();
         let uuid_hex = src_uuid.hex();
-        let uuid_parsed = UUID4::parse(uuid_hex.as_str()).expect("should parse generated uuid correctly");
+        let uuid_parsed =
+            UUID4::parse(uuid_hex.as_str()).expect("should parse generated uuid correctly");
         assert_eq!(src_uuid, uuid_parsed);
         let uuid_parsed_hex = uuid_parsed.hex();
         assert_eq!(uuid_hex, uuid_parsed_hex);

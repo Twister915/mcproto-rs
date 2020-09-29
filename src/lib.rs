@@ -5,19 +5,19 @@
 #[cfg(test)]
 extern crate test;
 
-mod serialize;
 mod deserialize;
-pub mod utils;
+pub mod nbt;
 #[macro_export]
 pub mod protocol;
-pub mod uuid;
-pub mod nbt;
-pub mod types;
-pub mod v1_15_2;
+mod serialize;
 pub mod status;
+pub mod types;
+pub mod utils;
+pub mod uuid;
+pub mod v1_15_2;
 
-pub use serialize::*;
 pub use deserialize::*;
+pub use serialize::*;
 
 #[cfg(test)]
 #[macro_export]
