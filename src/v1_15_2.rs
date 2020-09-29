@@ -2921,6 +2921,8 @@ pub mod tests {
     packet_test_cases!(Packet578, PlayUseItem, PlayUseItemSpec,
         test_play_use_item, bench_write_play_use_item, bench_read_play_use_item);
 
+    // trust me, this is some cutting edge shit
+    // I'm definitely not generating code using a unit test
     #[test]
     fn test_generate_test_cases() {
         Packet578::describe().packets.iter().map(move |packet| {
