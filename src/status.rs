@@ -1,4 +1,3 @@
-use crate::protocol::TestRandom;
 use crate::types::Chat;
 use crate::uuid::UUID4;
 use crate::{
@@ -7,6 +6,9 @@ use crate::{
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
+
+#[cfg(test)]
+use crate::protocol::TestRandom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct StatusSpec {

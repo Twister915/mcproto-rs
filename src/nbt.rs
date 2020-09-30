@@ -1,9 +1,11 @@
-use crate::protocol::TestRandom;
 use crate::utils::{
     read_int, read_long, read_one_byte, read_short, take, write_int, write_long, write_short,
 };
 use crate::{DeserializeErr, DeserializeResult, Deserialized};
 use std::fmt;
+
+#[cfg(test)]
+use crate::protocol::TestRandom;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct NamedTag {
