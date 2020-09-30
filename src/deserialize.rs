@@ -32,12 +32,13 @@ impl fmt::Display for DeserializeErr {
         }
     }
 }
-
 impl fmt::Debug for DeserializeErr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <dyn fmt::Display>::fmt(self, f)
     }
 }
+
+impl std::error::Error for DeserializeErr {}
 
 impl<'b, R> Into<DeserializeResult<'b, R>> for DeserializeErr {
     #[inline]

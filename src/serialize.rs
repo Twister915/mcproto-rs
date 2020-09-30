@@ -19,6 +19,8 @@ impl fmt::Debug for SerializeErr {
     }
 }
 
+impl std::error::Error for SerializeErr {}
+
 pub type SerializeResult = Result<(), SerializeErr>;
 
 pub trait Serialize: Sized {
