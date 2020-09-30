@@ -1,5 +1,5 @@
 use crate::{Deserialize, DeserializeErr, Serialize};
-use std::fmt::Debug;
+use std::fmt;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ProtocolSpec {
@@ -23,9 +23,9 @@ pub struct ProtocolPacketField {
     pub kind: String,
 }
 
-pub trait PacketIdentifier: Clone + Debug + PartialEq + Serialize {}
+pub trait PacketIdentifier: Clone + fmt::Debug + PartialEq + Serialize {}
 
-impl<T: Clone + Debug + PartialEq + Serialize> PacketIdentifier for T {}
+impl<T: Clone + fmt::Debug + PartialEq + Serialize> PacketIdentifier for T {}
 
 pub trait Packet<I: PacketIdentifier>: Serialize {
     fn id(&self) -> I;
@@ -33,11 +33,28 @@ pub trait Packet<I: PacketIdentifier>: Serialize {
     fn mc_deserialize(raw: RawPacket<I>) -> Result<Self, PacketErr>;
 }
 
-#[derive(Debug)]
 pub enum PacketErr {
     UnknownId(i32),
     DeserializeFailed(DeserializeErr),
 }
+
+impl fmt::Display for PacketErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use PacketErr::*;
+        match self {
+            UnknownId(id) => f.write_fmt(format_args!("unknown packet id {:?}", id)),
+            DeserializeFailed(err) => f.write_fmt(format_args!("failed to deserialize packet: {:?}", err))
+        }
+    }
+}
+
+impl fmt::Debug for PacketErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <dyn fmt::Display>::fmt(self, f)
+    }
+}
+
+impl std::error::Error for PacketErr {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawPacket<I> {
