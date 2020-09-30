@@ -1,5 +1,5 @@
 [package]
-name = "mc-proto-rs"
+name = "mcproto-rs"
 version = "0.1.0"
 authors = ["Joey Sacchini <joey@sacchini.net>"]
 edition = "2018"
