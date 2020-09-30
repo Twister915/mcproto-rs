@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["Joey Sacchini <joey@sacchini.net>"]
 edition = "2018"
 license = "Apache-2.0"
-license-file = "LICENSE"
 keywords = ["minecraft", "games", "protocol", "serialziers", "deserializers", "packets", "mc"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

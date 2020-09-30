@@ -1,7 +1,22 @@
-#[derive(Debug)]
+use std::fmt;
+
 pub enum SerializeErr {
     FailedJsonEncode(String),
-    InconsistentPlayerActions(String),
+}
+
+impl fmt::Display for SerializeErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use SerializeErr::*;
+        match self {
+            FailedJsonEncode(data) => f.write_fmt(format_args!("failed to serialize json: {:?}", data)),
+        }
+    }
+}
+
+impl fmt::Debug for SerializeErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <dyn fmt::Display>::fmt(self, f)
+    }
 }
 
 pub type SerializeResult = Result<(), SerializeErr>;
