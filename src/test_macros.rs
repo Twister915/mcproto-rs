@@ -13,7 +13,7 @@ macro_rules! packet_test_cases {
 
                 let raw_packet = RawPacket {
                     id: packet.id(),
-                    data: bytes,
+                    data: bytes.as_slice(),
                 };
 
                 let deserialized =
@@ -52,7 +52,7 @@ macro_rules! packet_test_cases {
             b.bytes = bytes.len() as u64;
             let raw_packet = RawPacket {
                 id: packet.id(),
-                data: bytes,
+                data: bytes.as_slice(),
             };
             b.iter(|| {
                 $pnam::mc_deserialize(raw_packet.clone()).expect("deserialize succeeds");

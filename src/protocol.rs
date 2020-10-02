@@ -30,7 +30,7 @@ impl<T: Clone + fmt::Debug + PartialEq + Serialize> PacketIdentifier for T {}
 pub trait Packet<I: PacketIdentifier>: Serialize {
     fn id(&self) -> I;
 
-    fn mc_deserialize(raw: RawPacket<I>) -> Result<Self, PacketErr>;
+    fn mc_deserialize(raw: RawPacket<'_, I>) -> Result<Self, PacketErr>;
 }
 
 pub enum PacketErr {
@@ -57,9 +57,9 @@ impl fmt::Debug for PacketErr {
 impl std::error::Error for PacketErr {}
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RawPacket<I> {
+pub struct RawPacket<'a, I> {
     pub id: I,
-    pub data: Vec<u8>,
+    pub data: &'a[u8],
 }
 
 pub trait ProtocolType: Serialize + Deserialize {}
@@ -200,7 +200,7 @@ macro_rules! define_protocol {
                 use crate::Deserialize;
 
                 let id = raw.id;
-                let data = raw.data.as_slice();
+                let data = raw.data;
 
                 match (id.id, id.state, id.direction) {
                     $(($id, $state, $direction) => Ok($nam($body::mc_deserialize(data).map_err(DeserializeFailed)?.value))),*,

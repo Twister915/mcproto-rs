@@ -1053,8 +1053,8 @@ impl Deserialize for BlockChangeHorizontalPosition {
 impl TestRandom for BlockChangeHorizontalPosition {
     fn test_gen_random() -> Self {
         BlockChangeHorizontalPosition {
-            rel_x: rand::random(),
-            rel_z: rand::random(),
+            rel_x: rand::random::<u8>() % 16,
+            rel_z: rand::random::<u8>() % 16,
         }
     }
 }
