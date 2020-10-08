@@ -259,7 +259,7 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         reason: Chat
     },
     PlayEntityStatus, 0x1C, Play, ClientBound => PlayEntityStatusSpec {
-        entity_id: VarInt,
+        entity_id: i32,
         raw_status: u8 // todo deal with the gigantic table
     },
     PlayExposion, 0x1D, Play, ClientBound => PlayExposionSpec {
