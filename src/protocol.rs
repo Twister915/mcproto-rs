@@ -199,21 +199,20 @@ macro_rules! define_protocol {
                 use self::$statet::*;
                 use self::$directiont::*;
                 use crate::protocol::PacketErr::*;
-                use crate::Deserialize;
+                use crate::{Deserialize, Deserialized};
 
                 let id = raw.id;
                 let data = raw.data;
 
                 match (id.id, id.state, id.direction) {
-                    $(($id, $state, $direction) => Ok($nam({
-                        let deserialized = $body::mc_deserialize(data).map_err(DeserializeFailed)?;
-                        let rest = deserialized.data;
+                    $(($id, $state, $direction) => {
+                        let Deserialized { value: body, data: rest } = $body::mc_deserialize(data).map_err(DeserializeFailed)?;
                         if !rest.is_empty() {
-                            return Err(ExtraData(rest.to_vec()))
+                            Err(ExtraData(rest.to_vec()))
+                        } else {
+                            Ok($nam(body))
                         }
-
-                        deserialized.value
-                    }))),*,
+                    }),*,
                     other => Err(UnknownId(other.0)),
                 }
             }
