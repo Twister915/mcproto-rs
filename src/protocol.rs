@@ -499,6 +499,35 @@ macro_rules! counted_array_type {
             }
         }
 
+        impl<'a, T> IntoIterator for &'a mut $name<T> where T: Debug + Clone + PartialEq {
+            type Item = &'a mut T;
+            type IntoIter = std::slice::IterMut<'a, T>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                let data = &mut self.data;
+                data.iter_mut()
+            }
+        }
+
+        impl<'a, T> IntoIterator for &'a $name<T> where T: Debug + Clone + PartialEq {
+            type Item = &'a T;
+            type IntoIter = std::slice::Iter<'a, T>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                let data = &self.data;
+                data.iter()
+            }
+        }
+
+        impl<T> IntoIterator for $name<T> where T: Debug + Clone + PartialEq {
+            type Item = T;
+            type IntoIter = std::vec::IntoIter<T>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.data.into_iter()
+            }
+        }
+
         #[cfg(test)]
         impl<T> TestRandom for $name<T>
         where
