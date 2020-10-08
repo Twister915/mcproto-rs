@@ -36,6 +36,7 @@ pub trait Packet<I: PacketIdentifier>: Serialize {
 pub enum PacketErr {
     UnknownId(i32),
     DeserializeFailed(DeserializeErr),
+    ExtraData(Vec<u8>),
 }
 
 impl fmt::Display for PacketErr {
@@ -43,7 +44,8 @@ impl fmt::Display for PacketErr {
         use PacketErr::*;
         match self {
             UnknownId(id) => f.write_fmt(format_args!("unknown packet id {:?}", id)),
-            DeserializeFailed(err) => f.write_fmt(format_args!("failed to deserialize packet: {:?}", err))
+            DeserializeFailed(err) => f.write_fmt(format_args!("failed to deserialize packet: {:?}", err)),
+            ExtraData(data) => f.write_fmt(format_args!("extra data unparsed at end of packet: {:?}", data))
         }
     }
 }
@@ -203,7 +205,15 @@ macro_rules! define_protocol {
                 let data = raw.data;
 
                 match (id.id, id.state, id.direction) {
-                    $(($id, $state, $direction) => Ok($nam($body::mc_deserialize(data).map_err(DeserializeFailed)?.value))),*,
+                    $(($id, $state, $direction) => Ok($nam({
+                        let deserialized = $body::mc_deserialize(data).map_err(DeserializeFailed)?;
+                        let rest = deserialized.data;
+                        if !rest.is_empty() {
+                            return Err(ExtraData(rest.to_vec()))
+                        }
+
+                        deserialized.value
+                    }))),*,
                     other => Err(UnknownId(other.0)),
                 }
             }
