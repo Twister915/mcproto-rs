@@ -2985,7 +2985,14 @@ impl LightingData {
     fn deserialize(update_mask: VarInt, reset_mask: VarInt, mut data: &[u8]) -> DeserializeResult<Self> {
         let mut out = Vec::with_capacity(LIGHT_DATA_SECTIONS);
         for i in 0..LIGHT_DATA_SECTIONS {
+            // gotta read the var int
             if update_mask.0 & (1 << i) != 0 {
+                let Deserialized { value: length, data: rest } = VarInt::mc_deserialize(data)?;
+                if (length.0 as usize) != LIGHT_DATA_LENGTH {
+                    return Err(DeserializeErr::CannotUnderstandValue(format!("bad data length in light update {}", length)));
+                }
+
+                data = rest;
                 if data.len() < LIGHT_DATA_LENGTH {
                     return Err(DeserializeErr::Eof);
                 }
@@ -3052,6 +3059,7 @@ impl LightingData {
     fn serialize_data<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         for item in &self.data {
             if let Some(contents) = item {
+                to.serialize_other(&VarInt(2048))?;
                 to.serialize_bytes(&contents[..])?;
             }
         }
