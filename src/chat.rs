@@ -425,6 +425,7 @@ impl TextComponent {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct TranslationComponent {
     pub translate: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub with: Vec<BoxedChat>,
 
     #[serde(flatten)]
@@ -452,7 +453,9 @@ pub struct ScoreComponent {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct ScoreComponentObjective {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub objective: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
 }
 
@@ -946,7 +949,11 @@ impl<'de> Deserialize<'de> for Chat {
                                 Err(M::Error::custom(format!("have with but it's not an array - {:?}", raw_with)))
                             }
                         } else {
-                            Err(M::Error::custom("have 'translate' but missing 'with', cannot parse"))
+                            Ok(Chat::Translation(TranslationComponent{
+                                base: base.into(),
+                                translate: translate.to_owned(),
+                                with: Vec::default(),
+                            }))
                         }
                     } else {
                         Err(M::Error::custom(format!("have translate but it's not a string - {:?}", raw_translate)))
