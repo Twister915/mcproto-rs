@@ -262,12 +262,12 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         entity_id: i32,
         raw_status: u8 // todo deal with the gigantic table
     },
-    PlayExposion, 0x1D, Play, ClientBound => PlayExposionSpec {
+    PlayExplosion, 0x1D, Play, ClientBound => PlayExplosionSpec {
         x: f32,
         y: f32,
         z: f32,
         strength: f32,
-        records: IntCountedArray<ExposionRecord>,
+        records: IntCountedArray<ExplosionRecord>,
         player_motion_x: f32,
         player_motion_y: f32,
         player_motion_z: f32
@@ -519,7 +519,9 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         world_age: i64,
         time_of_day: i64
     },
-    // todo title
+    PlayTitle, 0x50, Play, ClientBound => PlayTitleSpec {
+        action: TitleActionSpec
+    },
     PlayEntitySoundEffect, 0x51, Play, ClientBound => PlayEntitySoundEffectSpec {
         sound_id: VarInt,
         sound_category: SoundCategory,
@@ -895,7 +897,7 @@ impl From<Vec<u8>> for RemainingBytes {
 #[cfg(test)]
 impl TestRandom for RemainingBytes {
     fn test_gen_random() -> Self {
-        let mut size: usize = rand::random::<usize>() % 256;
+        let size: usize = rand::random::<usize>() % 256;
         let mut out = Vec::with_capacity(size);
         for _ in 0..size {
             out.push(rand::random());
@@ -1407,6 +1409,80 @@ impl TestRandom for UpdateScoreSpec {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum TitleActionSpec {
+    SetTitle(Chat),
+    SetSubtitle(Chat),
+    SetActionBar(Chat),
+    SetTimesAndDisplay(TitleTimesSpec),
+    Hide,
+    Reset
+}
+
+impl Serialize for TitleActionSpec {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use TitleActionSpec::*;
+
+        VarInt(match self {
+            SetTitle(_) => 0x00,
+            SetSubtitle(_) => 0x01,
+            SetActionBar(_) => 0x02,
+            SetTimesAndDisplay(_) => 0x03,
+            Hide => 0x04,
+            Reset => 0x05,
+        }).mc_serialize(to)?;
+
+        match self {
+            SetTitle(body) => to.serialize_other(body),
+            SetSubtitle(body) => to.serialize_other(body),
+            SetActionBar(body) => to.serialize_other(body),
+            SetTimesAndDisplay(body) => to.serialize_other(body),
+            _ => Ok(())
+        }
+    }
+}
+
+impl Deserialize for TitleActionSpec {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized{ value: action_id, data } = VarInt::mc_deserialize(data)?;
+
+        use TitleActionSpec::*;
+
+        match action_id.0 {
+            0x00 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetTitle(body))),
+            0x01 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetSubtitle(body))),
+            0x02 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetActionBar(body))),
+            0x03 => Ok(TitleTimesSpec::mc_deserialize(data)?.map(move |body| SetTimesAndDisplay(body))),
+            0x04 => Deserialized::ok(Hide, data),
+            0x05 => Deserialized::ok(Reset, data),
+            other => DeserializeErr::CannotUnderstandValue(format!("invalid title action id {}", other)).into()
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for TitleActionSpec {
+    fn test_gen_random() -> Self {
+        let action_id = rand::random::<usize>() % 6;
+        use TitleActionSpec::*;
+        match action_id {
+            0 => SetTitle(Chat::test_gen_random()),
+            1 => SetSubtitle(Chat::test_gen_random()),
+            2 => SetActionBar(Chat::test_gen_random()),
+            3 => SetTimesAndDisplay(TitleTimesSpec::test_gen_random()),
+            4 => Hide,
+            5 => Reset,
+            _ => panic!("impossible condition, modulo 6")
+        }
+    }
+}
+
+__protocol_body_def_helper!(TitleTimesSpec {
+    fade_in: i32,
+    stay: i32,
+    fade_out: i32
+});
+
 proto_varint_enum!(SoundCategory,
     0x00 :: Master,
     0x01 :: Music,
@@ -1420,7 +1496,7 @@ proto_varint_enum!(SoundCategory,
     0x09 :: Voice
 );
 
-__protocol_body_def_helper!(ExposionRecord {
+__protocol_body_def_helper!(ExplosionRecord {
     x: i8,
     y: i8,
     z: i8
@@ -1939,7 +2015,7 @@ impl Deserialize for PlayerInfoActionList {
 #[cfg(test)]
 impl TestRandom for PlayerInfoActionList {
     fn test_gen_random() -> Self {
-        PlayerInfoActionList::Remove({ vec![UUID4::random()] })
+        PlayerInfoActionList::Remove( vec![UUID4::random()] )
     }
 }
 
@@ -3455,11 +3531,11 @@ pub mod tests {
 
     packet_test_cases!(
         Packet578,
-        PlayExposion,
-        PlayExposionSpec,
-        test_play_exposion,
-        bench_write_play_exposion,
-        bench_read_play_exposion
+        PlayExplosion,
+        PlayExplosionSpec,
+        test_play_explosion,
+        bench_write_play_explosion,
+        bench_read_play_explosion
     );
 
     packet_test_cases!(
@@ -3910,6 +3986,15 @@ pub mod tests {
         test_play_time_update,
         bench_write_play_time_update,
         bench_read_play_time_update
+    );
+
+    packet_test_cases!(
+        Packet578,
+        PlayTitle,
+        PlayTitleSpec,
+        test_play_title,
+        bench_write_play_title,
+        bench_read_play_title
     );
 
     packet_test_cases!(

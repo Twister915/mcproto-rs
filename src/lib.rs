@@ -7,7 +7,6 @@ extern crate test;
 
 mod deserialize;
 pub mod nbt;
-#[macro_export]
 pub mod protocol;
 mod serialize;
 pub mod status;
@@ -20,5 +19,4 @@ pub use deserialize::*;
 pub use serialize::*;
 
 #[cfg(test)]
-#[macro_export]
 mod test_macros;
