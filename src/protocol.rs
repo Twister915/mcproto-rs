@@ -369,6 +369,98 @@ macro_rules! proto_int_enum {
 }
 
 #[macro_export]
+macro_rules! proto_str_enum {
+    ($typname: ident, $($sval: literal :: $nam: ident),*) => {
+        crate::as_item! {
+            #[derive(PartialEq, Clone, Copy)]
+            pub enum $typname {
+                $($nam),+,
+            }
+        }
+
+        impl Serialize for $typname {
+            fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                let name = self.name().to_owned();
+                to.serialize_other(&name)
+            }
+        }
+
+        impl Deserialize for $typname {
+            fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+                String::mc_deserialize(data)?.and_then(move |name, rest| {
+                    if let Some(v) = Self::from_string(&name) {
+                        Deserialized::ok(v, rest)
+                    } else {
+                        Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} ident '{}'", stringify!($typname), name)))
+                    }
+                })
+            }
+        }
+
+        impl $typname {
+            pub fn from_str(arg: &str) -> Option<Self> {
+                use $typname::*;
+
+                match arg {
+                    $($sval => Some($nam)),+,
+                    _ => None
+                }
+            }
+
+            pub fn from_string(arg: &String) -> Option<Self> {
+                Self::from_str(arg.as_str())
+            }
+
+            pub fn name(&self) -> &str {
+                use $typname::*;
+
+                match self {
+                    $($nam => $sval),+,
+                }
+            }
+        }
+
+        impl From<&$typname> for String {
+            fn from(arg: &$typname) -> Self {
+                arg.name().to_owned()
+            }
+        }
+
+        impl From<$typname> for String {
+            fn from(arg: $typname) -> Self {
+                arg.name().to_owned()
+            }
+        }
+
+        impl std::fmt::Display for $typname {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str(self.name())
+            }
+        }
+
+        impl std::fmt::Debug for $typname {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                <dyn std::fmt::Display>::fmt(self, f)
+            }
+        }
+
+        #[cfg(test)]
+        impl TestRandom for $typname {
+            fn test_gen_random() -> Self {
+                let mut idx: usize = (rand::random::<usize>() % (count_num!($($nam),+))) + 1;
+                $(
+                    idx -= 1;
+                    if idx == 0 {
+                        return $typname::$nam;
+                    }
+                )+
+                panic!("cannot generate random {}", stringify!($typname));
+            }
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! proto_byte_flag {
     ($typname: ident, $($bval: literal :: $nam: ident),*) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]

@@ -504,8 +504,14 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         entity_id: VarInt,
         passenger_entitiy_ids: VarIntCountedArray<VarInt>
     },
-    // todo teams
-    // todo update score
+    PlayTeams, 0x4C, Play, ClientBound => PlayTeamsSpec {
+        team_name: String,
+        action: TeamAction
+    },
+    PlayUpdateScore, 0x4D, Play, ClientBound => PlayUpdateScoreSpec {
+        entity_name: TeamMember,
+        update: UpdateScoreSpec
+    },
     PlaySpawnPosition, 0x4E, Play, ClientBound => PlaySpawnPositionSpec {
         location: IntPosition
     },
@@ -1180,6 +1186,226 @@ __protocol_body_def_helper!(TabCompleteMatch {
     match_: String,
     tooltip: Option<Chat>
 });
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TeamAction {
+    Create(TeamActionCreateSpec),
+    Remove,
+    UpdateInfo(TeamActionUpdateInfoSpec),
+    AddPlayers(TeamActionPlayerList),
+    RemovePlayers(TeamActionPlayerList)
+}
+
+impl Serialize for TeamAction {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use TeamAction::*;
+
+        to.serialize_byte(match self {
+            Create(_) => 0x00,
+            Remove => 0x01,
+            UpdateInfo(_) => 0x02,
+            AddPlayers(_) => 0x03,
+            RemovePlayers(_) => 0x04
+        })?;
+
+        match self {
+            Create(body) => to.serialize_other(body),
+            UpdateInfo(body) => to.serialize_other(body),
+            AddPlayers(body) => to.serialize_other(body),
+            RemovePlayers(body) => to.serialize_other(body),
+            _ => Ok(())
+        }
+    }
+}
+
+impl Deserialize for TeamAction {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: id, data } = u8::mc_deserialize(data)?;
+
+        use TeamAction::*;
+
+        match id {
+            0x00 => Ok(TeamActionCreateSpec::mc_deserialize(data)?.map(move |body| Create(body))),
+            0x01 => Deserialized::ok(Remove, data),
+            0x02 => Ok(TeamActionUpdateInfoSpec::mc_deserialize(data)?.map(move |body| UpdateInfo(body))),
+            0x03 => Ok(TeamActionPlayerList::mc_deserialize(data)?.map(move |body| AddPlayers(body))),
+            0x04 => Ok(TeamActionPlayerList::mc_deserialize(data)?.map(move |body| RemovePlayers(body))),
+            other => Err(DeserializeErr::CannotUnderstandValue(format!("invalid team action id {}", other)))
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for TeamAction {
+    fn test_gen_random() -> Self {
+        let rand_idx = rand::random::<usize>() % 5;
+
+        use TeamAction::*;
+
+        match rand_idx {
+            0 => Create(TeamActionCreateSpec::test_gen_random()),
+            1 => Remove,
+            2 => UpdateInfo(TeamActionUpdateInfoSpec::test_gen_random()),
+            3 => AddPlayers(TeamActionPlayerList::test_gen_random()),
+            4 => RemovePlayers(TeamActionPlayerList::test_gen_random()),
+            impossible => panic!("impossible condition because modulus {}", impossible)
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TeamMember {
+    Player(String),
+    Entity(UUID4)
+}
+
+impl Serialize for TeamMember {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use TeamMember::*;
+        match self {
+            Player(username) => username.mc_serialize(to),
+            Entity(entity_id) => entity_id.to_string().mc_serialize(to)
+        }
+    }
+}
+
+impl Deserialize for TeamMember {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        use TeamMember::*;
+
+        Ok(String::mc_deserialize(data)?.map(move |raw| {
+            if let Some(entity_id) = UUID4::parse(raw.as_str()) {
+                Entity(entity_id)
+            } else {
+                Player(raw)
+            }
+        }))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for TeamMember {
+    fn test_gen_random() -> Self {
+        use TeamMember::*;
+
+        let rand_bool: bool = rand::random();
+        if rand_bool {
+            Player(String::test_gen_random())
+        } else {
+            Entity(UUID4::random())
+        }
+    }
+}
+
+proto_str_enum!(TeamTagNameVisibility,
+    "always" :: Always,
+    "hideForOtherTeams" :: HideForOtherTeams,
+    "hideForOwnTeam" :: HideForOwnTeam,
+    "never" :: Never
+);
+
+proto_str_enum!(TeamCollisionRule,
+    "always" :: Always,
+    "pushForOtherTeams" :: PushForOtherTeams,
+    "pushOwnTeam" :: PushOwnTeam,
+    "never" :: Never
+);
+
+__protocol_body_def_helper!(TeamActionPlayerList {
+    entities: VarIntCountedArray<TeamMember>
+});
+
+__protocol_body_def_helper!(TeamActionCreateSpec {
+    display_name: Chat,
+    friendly_flags: TeamFriendlyFlags,
+    tag_name_visibility: TeamTagNameVisibility,
+    collision_rule: TeamCollisionRule,
+    color: VarInt,
+    prefix: Chat,
+    suffix: Chat,
+    entities: VarIntCountedArray<TeamMember>
+});
+
+__protocol_body_def_helper!(TeamActionUpdateInfoSpec {
+    display_name: Chat,
+    friendly_flags: TeamFriendlyFlags,
+    tag_name_visibility: TeamTagNameVisibility,
+    collision_rule: TeamCollisionRule,
+    color: VarInt,
+    prefix: Chat,
+    suffix: Chat
+});
+
+proto_byte_flag!(TeamFriendlyFlags,
+    0x01 :: allow_friendly_fire,
+    0x02 :: show_invisible_teammates
+);
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UpdateScoreAction {
+    Upsert(VarInt),
+    Remove
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateScoreSpec {
+    pub objective_name: String,
+    pub action: UpdateScoreAction
+}
+
+impl Serialize for UpdateScoreSpec {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use UpdateScoreAction::*;
+        to.serialize_byte(match self.action {
+            Upsert(_) => 0x0,
+            Remove => 0x01
+        })?;
+        to.serialize_other(&self.objective_name)?;
+        if let Upsert(value) = &self.action {
+            to.serialize_other(value)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Deserialize for UpdateScoreSpec {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: action_id, data } = u8::mc_deserialize(data)?;
+        let Deserialized { value: objective_name, data } = String::mc_deserialize(data)?;
+
+        use UpdateScoreAction::*;
+        let Deserialized{ value: action, data } = match action_id {
+            0x00 => Ok(VarInt::mc_deserialize(data)?.map(move |value| Upsert(value))),
+            0x01 => Deserialized::ok(Remove, data),
+            other => DeserializeErr::CannotUnderstandValue(format!("invalid update score action {}", other)).into()
+        }?;
+
+        Deserialized::ok(Self {
+            objective_name,
+            action,
+        }, data)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for UpdateScoreSpec {
+    fn test_gen_random() -> Self {
+        use UpdateScoreAction::*;
+
+        let rand_bool = rand::random::<bool>();
+        let action = if rand_bool {
+            Upsert(VarInt::test_gen_random())
+        } else {
+            Remove
+        };
+
+        Self {
+            objective_name: String::test_gen_random(),
+            action,
+        }
+    }
+}
 
 proto_varint_enum!(SoundCategory,
     0x00 :: Master,
@@ -3648,6 +3874,24 @@ pub mod tests {
         test_play_set_passengers,
         bench_write_play_set_passengers,
         bench_read_play_set_passengers
+    );
+
+    packet_test_cases!(
+        Packet578,
+        PlayTeams,
+        PlayTeamsSpec,
+        test_play_teams,
+        bench_write_play_teams,
+        bench_read_play_teams
+    );
+
+    packet_test_cases!(
+        Packet578,
+        PlayUpdateScore,
+        PlayUpdateScoreSpec,
+        test_play_update_score,
+        bench_write_play_update_score,
+        bench_read_play_update_score
     );
 
     packet_test_cases!(
