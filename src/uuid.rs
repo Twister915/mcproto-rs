@@ -192,4 +192,19 @@ mod tests {
     fn test_debug_uuid() {
         println!("got uuid {:?}", UUID4::random());
     }
+
+    #[test]
+    fn test_to_json() {
+        let id = UUID4::random();
+        let str = serde_json::to_string(&id).expect("should serialize fine");
+        assert_eq!(str, format!("\"{}\"", id.to_string()))
+    }
+
+    #[test]
+    fn test_from_json() {
+        let id = UUID4::random();
+        let json = format!("\"{}\"", id.to_string());
+        let deserialized: UUID4 = serde_json::from_str(json.as_str()).expect("should read fine");
+        assert_eq!(deserialized, id);
+    }
 }

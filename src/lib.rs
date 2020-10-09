@@ -20,3 +20,4 @@ pub use serialize::*;
 
 #[cfg(test)]
 mod test_macros;
+mod chat;

@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 #[cfg(test)]
 use crate::protocol::TestRandom;
+use std::cell::Cell;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PacketDirection {
@@ -37,7 +38,7 @@ impl State {
             Login => "Login",
             Play => "Play",
         }
-        .to_owned()
+            .to_owned()
     }
 }
 
@@ -1403,7 +1404,7 @@ impl Deserialize for UpdateScoreSpec {
                 "invalid update score action {}",
                 other
             ))
-            .into(),
+                .into(),
         }?;
 
         Deserialized::ok(
@@ -1457,7 +1458,7 @@ impl Serialize for TitleActionSpec {
             Hide => 0x04,
             Reset => 0x05,
         })
-        .mc_serialize(to)?;
+            .mc_serialize(to)?;
 
         match self {
             SetTitle(body) => to.serialize_other(body),
@@ -1916,8 +1917,8 @@ pub struct PlayerInfoAction<A: Clone + PartialEq + Debug> {
 }
 
 impl<A> Serialize for PlayerInfoAction<A>
-where
-    A: Serialize + Clone + PartialEq + Debug,
+    where
+        A: Serialize + Clone + PartialEq + Debug,
 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         to.serialize_other(&self.uuid)?;
@@ -1926,8 +1927,8 @@ where
 }
 
 impl<A> Deserialize for PlayerInfoAction<A>
-where
-    A: Deserialize + Clone + PartialEq + Debug,
+    where
+        A: Deserialize + Clone + PartialEq + Debug,
 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         let Deserialized { value: uuid, data } = UUID4::mc_deserialize(data)?;
@@ -1981,7 +1982,7 @@ impl PlayerInfoActionList {
             UpdateDisplayName(_) => 0x03,
             Remove(_) => 0x04,
         }
-        .into()
+            .into()
     }
 
     pub fn len(&self) -> usize {
@@ -2185,7 +2186,7 @@ impl WorldBorderAction {
             SetWarningTime(_) => 0x04,
             SetWarningBlocks(_) => 0x05,
         }
-        .into()
+            .into()
     }
 }
 
@@ -2465,7 +2466,7 @@ impl InteractKind {
             Attack => 0x01,
             InteractAt(_) => 0x02,
         }
-        .into()
+            .into()
     }
 }
 
@@ -2658,7 +2659,7 @@ impl Recipe {
             CampfireCooking(_) => "minecraft:campfire_cooking",
             StoneCutting(_) => "minecraft:stonecutting",
         }
-        .to_owned()
+            .to_owned()
     }
 
     fn serialize_body<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -2754,10 +2755,10 @@ impl Deserialize for RecipeSpec {
                 other
             ))),
         }?
-        .map(move |recipe_body| RecipeSpec {
-            id: recipe_id,
-            recipe: recipe_body,
-        }))
+            .map(move |recipe_body| RecipeSpec {
+                id: recipe_id,
+                recipe: recipe_body,
+            }))
     }
 }
 
@@ -2917,26 +2918,11 @@ impl Serialize for ChunkData {
 
 impl Deserialize for ChunkData {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: chunk_x,
-            data,
-        } = i32::mc_deserialize(data)?;
-        let Deserialized {
-            value: chunk_z,
-            data,
-        } = i32::mc_deserialize(data)?;
-        let Deserialized {
-            value: is_full_chunk,
-            data,
-        } = bool::mc_deserialize(data)?;
-        let Deserialized {
-            value: primary_bit_mask,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: heightmaps,
-            mut data,
-        } = NamedNbtTag::mc_deserialize(data)?;
+        let Deserialized { value: chunk_x, data } = i32::mc_deserialize(data)?;
+        let Deserialized { value: chunk_z, data } = i32::mc_deserialize(data)?;
+        let Deserialized { value: is_full_chunk, data } = bool::mc_deserialize(data)?;
+        let Deserialized { value: primary_bit_mask, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: heightmaps, mut data } = NamedNbtTag::mc_deserialize(data)?;
         let biomes = if is_full_chunk {
             let mut biomes: [i32; 1024] = [0i32; 1024];
             for elem in &mut biomes {
@@ -2948,37 +2934,25 @@ impl Deserialize for ChunkData {
         } else {
             None
         };
-        let Deserialized {
-            value: chunk_data,
-            data,
-        } = VarIntCountedArray::<u8>::mc_deserialize(data)?;
-        let Deserialized {
-            value: n_block_entities_raw,
-            mut data,
-        } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: chunk_data, data } = VarIntCountedArray::<u8>::mc_deserialize(data)?;
+        let Deserialized { value: n_block_entities_raw, mut data } = VarInt::mc_deserialize(data)?;
         let n_block_entities = n_block_entities_raw.0 as usize;
         let mut block_entities = Vec::with_capacity(n_block_entities);
         for _ in 0..n_block_entities {
-            let Deserialized {
-                value: entity,
-                data: rest,
-            } = NamedNbtTag::mc_deserialize(data)?;
+            let Deserialized { value: entity, data: rest } = NamedNbtTag::mc_deserialize(data)?;
             data = rest;
             block_entities.push(entity);
         }
 
-        Deserialized::ok(
-            ChunkData {
-                chunk_x,
-                chunk_z,
-                primary_bit_mask,
-                heightmaps,
-                biomes,
-                data: chunk_data,
-                block_entities,
-            },
-            data,
-        )
+        Deserialized::ok(ChunkData {
+            chunk_x,
+            chunk_z,
+            primary_bit_mask,
+            heightmaps,
+            biomes,
+            data: chunk_data,
+            block_entities,
+        }, data)
     }
 }
 
@@ -2997,204 +2971,88 @@ impl TestRandom for ChunkData {
     }
 }
 
-const LIGHT_DATA_LENGTH: usize = 2048;
-const LIGHT_DATA_SECTIONS: usize = 18;
+pub const LIGHT_DATA_LENGTH: usize = 2048;
+pub const LIGHT_DATA_SECTIONS: usize = 18;
 
-type LightingData = Vec<Option<[u8; LIGHT_DATA_LENGTH]>>;
+pub struct LightingData {
+    pub data: Vec<Option<[u8; LIGHT_DATA_LENGTH]>>,
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct LightingUpdateSpec {
-    pub skylight_data: LightingData,
-    pub blocklight_data: LightingData,
-
-    _cached_skylight_update_mask: Option<VarInt>,
-    _cached_blocklight_update_mask: Option<VarInt>,
-    _cached_skylight_reset_mask: Option<VarInt>,
-    _cached_blocklight_reset_mask: Option<VarInt>,
+    _update_mask: Cell<Option<VarInt>>,
+    _reset_mask: Cell<Option<VarInt>>,
 }
 
-impl Serialize for LightingUpdateSpec {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let (
-            (skylight_update_mask, skylight_reset_mask),
-            (blocklight_update_mask, blocklight_reset_mask),
-        ) = self.get_masks();
-        to.serialize_other(&skylight_update_mask)?;
-        to.serialize_other(&blocklight_update_mask)?;
-        to.serialize_other(&skylight_reset_mask)?;
-        to.serialize_other(&blocklight_reset_mask)?;
-        Self::write_lighting_data(to, &self.skylight_data)?;
-        Self::write_lighting_data(to, &self.blocklight_data)
-    }
-}
-
-impl Deserialize for LightingUpdateSpec {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: skylight_update_mask,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: blocklight_update_mask,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: skylight_reset_mask,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: blocklight_reset_mask,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: skylight_data,
-            data,
-        } = Self::read_lighting_data_arrays(&skylight_update_mask, data)?;
-        let Deserialized {
-            value: blocklight_data,
-            data,
-        } = Self::read_lighting_data_arrays(&blocklight_update_mask, data)?;
-
-        Deserialized::ok(
-            Self {
-                skylight_data,
-                blocklight_data,
-
-                _cached_skylight_update_mask: Some(skylight_update_mask),
-                _cached_blocklight_update_mask: Some(blocklight_update_mask),
-                _cached_skylight_reset_mask: Some(skylight_reset_mask),
-                _cached_blocklight_reset_mask: Some(blocklight_reset_mask),
-            },
-            data,
-        )
-    }
-}
-
-impl LightingUpdateSpec {
-    pub fn compute_masks(&mut self) {
-        let this = &mut *self;
-        let skylight_data = &this.skylight_data;
-        let blocklight_data = &this.blocklight_data;
-        Self::replace_optionals_if_needed(
-            (
-                &mut this._cached_skylight_update_mask,
-                &mut this._cached_skylight_reset_mask,
-            ),
-            move || Self::compute_masks_for(skylight_data),
-        );
-        Self::replace_optionals_if_needed(
-            (
-                &mut this._cached_blocklight_update_mask,
-                &mut this._cached_blocklight_reset_mask,
-            ),
-            move || Self::compute_masks_for(blocklight_data),
-        );
-    }
-
-    pub fn get_masks(&self) -> ((VarInt, VarInt), (VarInt, VarInt)) {
-        (
-            Self::read_or_compute(
-                (
-                    &self._cached_skylight_update_mask,
-                    &self._cached_skylight_reset_mask,
-                ),
-                || Self::compute_masks_for(&self.skylight_data),
-            ),
-            Self::read_or_compute(
-                (
-                    &self._cached_blocklight_update_mask,
-                    &self._cached_blocklight_reset_mask,
-                ),
-                || Self::compute_masks_for(&self.skylight_data),
-            ),
-        )
-    }
-
-    fn read_lighting_data_arrays<'a>(
-        mask: &VarInt,
-        mut data: &'a [u8],
-    ) -> DeserializeResult<'a, LightingData> {
-        let mut out = vec![None; LIGHT_DATA_SECTIONS];
+impl LightingData {
+    fn deserialize(update_mask: VarInt, reset_mask: VarInt, mut data: &[u8]) -> DeserializeResult<Self> {
+        let mut out = Vec::with_capacity(LIGHT_DATA_SECTIONS);
         for i in 0..LIGHT_DATA_SECTIONS {
-            if (mask.0 & (1 << i)) != 0 {
-                let Deserialized {
-                    value: length,
-                    data: rest,
-                } = VarInt::mc_deserialize(data)?;
-                if (length.0 as usize) != LIGHT_DATA_LENGTH {
-                    return DeserializeErr::CannotUnderstandValue(format!(
-                        "all lighting update arrays are supposed to be 2048, got length of {}",
-                        length
-                    ))
-                    .into();
+            if update_mask.0 & (1 << i) != 0 {
+                if data.len() < LIGHT_DATA_LENGTH {
+                    return Err(DeserializeErr::Eof);
                 }
 
-                if rest.len() < LIGHT_DATA_LENGTH {
-                    return DeserializeErr::Eof.into();
-                }
-
-                let mut data_entry = [0u8; LIGHT_DATA_LENGTH];
-                let (data_src, rest) = rest.split_at(LIGHT_DATA_LENGTH);
-                data_entry.copy_from_slice(data_src);
-                out[i] = Some(data_entry);
+                let (section, rest) = data.split_at(LIGHT_DATA_LENGTH);
+                let mut to_vec = [0u8; LIGHT_DATA_LENGTH];
+                to_vec.copy_from_slice(section);
+                out.push(Some(to_vec));
                 data = rest;
+            } else {
+                out.push(None)
             }
         }
 
-        Deserialized::ok(out, data)
+        let result = Self {
+            data: out,
+            _update_mask: Cell::new(Some(update_mask)),
+            _reset_mask: Cell::new(Some(reset_mask)),
+        };
+
+        Deserialized::ok(result, data)
     }
 
-    fn compute_masks_for(data: &LightingData) -> (VarInt, VarInt) {
-        let mut update_mask = 0;
-        let mut reset_mask = 0;
-        for i in 0..LIGHT_DATA_SECTIONS {
-            match data[i] {
-                Some(_) => {
-                    update_mask |= 1 << i;
-                }
+    fn update_mask(&self) -> &VarInt {
+        Self::lazily_get(&self._update_mask, || self.compute_update_mask())
+    }
+
+    fn reset_mask(&self) -> &VarInt {
+        Self::lazily_get(&self._reset_mask, || self.compute_reset_mask())
+    }
+
+    fn lazily_get<T, F>(option: &Cell<Option<T>>, provider: F) -> &T where F: FnOnce() -> T {
+        unsafe {
+            let ptr = option.as_ptr().as_mut().expect("non-null");
+            match ptr {
+                Some(data) => data,
                 None => {
-                    reset_mask |= 1 << i;
+                    ptr.replace(provider());
+                    ptr.as_ref().expect("it's there")
                 }
             }
         }
-
-        (VarInt(update_mask), VarInt(reset_mask))
     }
 
-    fn replace_optionals_if_needed<T1, T2, F>(
-        targets: (&mut Option<T1>, &mut Option<T2>),
-        update: F,
-    ) where
-        F: FnOnce() -> (T1, T2),
-    {
-        let (a, b) = targets;
-        if a.is_none() || b.is_none() {
-            let (v_a, v_b) = update();
-            *a = Some(v_a);
-            *b = Some(v_b);
-        }
+    fn compute_update_mask(&self) -> VarInt {
+        self.compute_has_mask(true)
     }
 
-    fn read_or_compute<T1, T2, F>(targets: (&Option<T1>, &Option<T2>), update: F) -> (T1, T2)
-    where
-        F: FnOnce() -> (T1, T2),
-        T1: Copy,
-        T2: Copy,
-    {
-        let (a, b) = targets;
-        if a.is_none() || b.is_none() {
-            let (v_a, v_b) = update();
-            (v_a, v_b)
-        } else {
-            (a.unwrap(), b.unwrap())
-        }
+    fn compute_reset_mask(&self) -> VarInt {
+        self.compute_has_mask(false)
     }
 
-    fn write_lighting_data<S: Serializer>(to: &mut S, data: &LightingData) -> SerializeResult {
+    fn compute_has_mask(&self, has: bool) -> VarInt {
+        let mut out: u32 = 0;
         for i in 0..LIGHT_DATA_SECTIONS {
-            if let Some(entry) = &data[i] {
-                to.serialize_other(&VarInt(LIGHT_DATA_LENGTH as i32))?;
-                to.serialize_bytes(&entry[..])?;
+            if self.data[i].is_some() == has {
+                out |= 1 << i;
+            }
+        }
+
+        VarInt(out as i32)
+    }
+
+    fn serialize_data<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        for item in &self.data {
+            if let Some(contents) = item {
+                to.serialize_bytes(&contents[..])?;
             }
         }
 
@@ -3202,36 +3060,57 @@ impl LightingUpdateSpec {
     }
 }
 
-#[cfg(test)]
-impl TestRandom for LightingUpdateSpec {
-    fn test_gen_random() -> Self {
-        let (skylight_update_mask, skylight_reset_mask, skylight_data) =
-            Self::gen_random_lighting_data();
-        let (blocklight_update_mask, blocklight_reset_mask, blocklight_data) =
-            Self::gen_random_lighting_data();
+impl std::fmt::Debug for LightingData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+           "LightingData(update={:018b}, reset={:018b}, size={}, bytes={})",
+           self.update_mask().0,
+           self.reset_mask().0,
+           self.data.iter().filter(move |v| v.is_some()).count(),
+           self.data.iter()
+               .filter_map(move |v| v.
+                   map(move |arr| arr.len()))
+               .sum::<usize>())
+    }
+}
 
+impl std::fmt::Display for LightingData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <dyn std::fmt::Debug>::fmt(self, f)
+    }
+}
+
+impl Clone for LightingData {
+    fn clone(&self) -> Self {
         Self {
-            skylight_data,
-            blocklight_data,
-
-            _cached_skylight_update_mask: Some(skylight_update_mask),
-            _cached_blocklight_update_mask: Some(blocklight_update_mask),
-            _cached_skylight_reset_mask: Some(skylight_reset_mask),
-            _cached_blocklight_reset_mask: Some(blocklight_reset_mask),
+            data: self.data.clone(),
+            _update_mask: Cell::new(Some(self.update_mask().clone())),
+            _reset_mask: Cell::new(Some(self.reset_mask().clone())),
         }
     }
 }
 
+impl PartialEq for LightingData {
+    fn eq(&self, other: &Self) -> bool {
+        self.data.eq(&other.data) &&
+            self.update_mask().eq(other.update_mask()) &&
+            self.reset_mask().eq(other.reset_mask())
+    }
+}
+
 #[cfg(test)]
-impl LightingUpdateSpec {
+impl LightingData {
     fn gen_random_mask() -> i32 {
         let rand: u32 = rand::random();
         (rand & ((1 << 19) - 1)) as i32
     }
+}
 
-    fn gen_random_lighting_data() -> (VarInt, VarInt, LightingData) {
+#[cfg(test)]
+impl TestRandom for LightingData {
+    fn test_gen_random() -> Self {
         let set_mask = Self::gen_random_mask();
-        let reset_mask = !set_mask & ((1 << 19) - 1);
         let mut data = vec![None; LIGHT_DATA_SECTIONS];
         for i in 0..LIGHT_DATA_SECTIONS {
             if (set_mask & (1 << i)) != 0 {
@@ -3243,7 +3122,65 @@ impl LightingUpdateSpec {
             }
         }
 
-        (VarInt(set_mask), VarInt(reset_mask), data)
+        let cache_masks = rand::random::<bool>();
+
+        if cache_masks {
+            Self {
+                data,
+                _update_mask: Cell::new(Some(VarInt(set_mask))),
+                _reset_mask: Cell::new(None),
+            }
+        } else {
+            Self {
+                data,
+                _update_mask: Cell::new(None),
+                _reset_mask: Cell::new(None),
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct LightingUpdateSpec {
+    pub skylight_data: LightingData,
+    pub blocklight_data: LightingData,
+}
+
+impl Serialize for LightingUpdateSpec {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        self.skylight_data.update_mask().mc_serialize(to)?;
+        self.blocklight_data.update_mask().mc_serialize(to)?;
+        self.skylight_data.reset_mask().mc_serialize(to)?;
+        self.blocklight_data.reset_mask().mc_serialize(to)?;
+        self.skylight_data.serialize_data(to)?;
+        self.blocklight_data.serialize_data(to)
+    }
+}
+
+impl Deserialize for LightingUpdateSpec {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: skylight_update_mask, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: blocklight_update_mask, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: skylight_reset_mask, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: blocklight_reset_mask, data } = VarInt::mc_deserialize(data)?;
+
+        let Deserialized { value: skylight_data, data } = LightingData::deserialize(skylight_update_mask, skylight_reset_mask, data)?;
+        let Deserialized { value: blocklight_data, data } = LightingData::deserialize(blocklight_update_mask, blocklight_reset_mask, data)?;
+
+        Deserialized::ok(Self {
+            skylight_data,
+            blocklight_data,
+        }, data)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for LightingUpdateSpec {
+    fn test_gen_random() -> Self {
+        Self {
+            skylight_data: LightingData::test_gen_random(),
+            blocklight_data: LightingData::test_gen_random(),
+        }
     }
 }
 

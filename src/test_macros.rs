@@ -19,9 +19,15 @@ macro_rules! packet_test_cases {
                     data: bytes.as_slice(),
                 };
 
-                let deserialized =
-                    <$pnam>::mc_deserialize(raw_packet).expect("deserialize succeeds");
-                assert_eq!(packet, deserialized);
+                let deserialized = match <$pnam>::mc_deserialize(raw_packet) {
+                    Err(err) => {
+                        eprintln!("expected: {:?}", packet);
+                        panic!("error: {:?}", err);
+                    },
+                    Ok(out) => out
+                };
+                assert_eq!(packet, deserialized, "deserialize(serialize(packet)) == packet");
+                assert_eq!(packet.clone(), deserialized.clone(), "deserialized.clone() == packet.clone()")
             }
         }
 
