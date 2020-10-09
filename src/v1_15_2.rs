@@ -3099,6 +3099,8 @@ impl PartialEq for LightingData {
     }
 }
 
+unsafe impl Sync for LightingData {}
+
 #[cfg(test)]
 impl LightingData {
     fn gen_random_mask() -> i32 {
