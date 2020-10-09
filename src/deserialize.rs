@@ -1,6 +1,6 @@
 use crate::types::VarInt;
-use std::string::FromUtf8Error;
 use std::fmt;
+use std::string::FromUtf8Error;
 
 pub enum DeserializeErr {
     Eof,
@@ -20,15 +20,31 @@ impl fmt::Display for DeserializeErr {
         use DeserializeErr::*;
         match self {
             Eof => f.write_str("unexpected eof"),
-            VarNumTooLong(data) => f.write_fmt(format_args!("var num is too long: data={:?}", data)),
-            NegativeLength(data) => f.write_fmt(format_args!("negative length encountered {:?}", data)),
-            BadStringEncoding(data) => f.write_fmt(format_args!("failed to decode string, utf error: {:?}", data)),
-            InvalidBool(value) => f.write_fmt(format_args!("could not decode boolean, unexpected byte: {:?}", value)),
+            VarNumTooLong(data) => {
+                f.write_fmt(format_args!("var num is too long: data={:?}", data))
+            }
+            NegativeLength(data) => {
+                f.write_fmt(format_args!("negative length encountered {:?}", data))
+            }
+            BadStringEncoding(data) => f.write_fmt(format_args!(
+                "failed to decode string, utf error: {:?}",
+                data
+            )),
+            InvalidBool(value) => f.write_fmt(format_args!(
+                "could not decode boolean, unexpected byte: {:?}",
+                value
+            )),
             NbtUnknownTagType(data) => f.write_fmt(format_args!("nbt: bad tag type {}", data)),
             NbtBadLength(data) => f.write_fmt(format_args!("nbt: bad length {:?}", data)),
-            NbtInvalidStartTag(data) => f.write_fmt(format_args!("nbt: unexpected start tag id: {:?}", data)),
-            CannotUnderstandValue(data) => f.write_fmt(format_args!("cannot understand value: {:?}", data)),
-            FailedJsonDeserialize(data) => f.write_fmt(format_args!("failed to deserialize json: {:?}", data)),
+            NbtInvalidStartTag(data) => {
+                f.write_fmt(format_args!("nbt: unexpected start tag id: {:?}", data))
+            }
+            CannotUnderstandValue(data) => {
+                f.write_fmt(format_args!("cannot understand value: {:?}", data))
+            }
+            FailedJsonDeserialize(data) => {
+                f.write_fmt(format_args!("failed to deserialize json: {:?}", data))
+            }
         }
     }
 }

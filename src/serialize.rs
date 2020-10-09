@@ -8,7 +8,9 @@ impl fmt::Display for SerializeErr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use SerializeErr::*;
         match self {
-            FailedJsonEncode(data) => f.write_fmt(format_args!("failed to serialize json: {:?}", data)),
+            FailedJsonEncode(data) => {
+                f.write_fmt(format_args!("failed to serialize json: {:?}", data))
+            }
         }
     }
 }

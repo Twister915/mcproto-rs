@@ -37,7 +37,7 @@ impl State {
             Login => "Login",
             Play => "Play",
         }
-            .to_owned()
+        .to_owned()
     }
 }
 
@@ -1195,7 +1195,7 @@ pub enum TeamAction {
     Remove,
     UpdateInfo(TeamActionUpdateInfoSpec),
     AddPlayers(TeamActionPlayerList),
-    RemovePlayers(TeamActionPlayerList)
+    RemovePlayers(TeamActionPlayerList),
 }
 
 impl Serialize for TeamAction {
@@ -1207,7 +1207,7 @@ impl Serialize for TeamAction {
             Remove => 0x01,
             UpdateInfo(_) => 0x02,
             AddPlayers(_) => 0x03,
-            RemovePlayers(_) => 0x04
+            RemovePlayers(_) => 0x04,
         })?;
 
         match self {
@@ -1215,7 +1215,7 @@ impl Serialize for TeamAction {
             UpdateInfo(body) => to.serialize_other(body),
             AddPlayers(body) => to.serialize_other(body),
             RemovePlayers(body) => to.serialize_other(body),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -1229,10 +1229,20 @@ impl Deserialize for TeamAction {
         match id {
             0x00 => Ok(TeamActionCreateSpec::mc_deserialize(data)?.map(move |body| Create(body))),
             0x01 => Deserialized::ok(Remove, data),
-            0x02 => Ok(TeamActionUpdateInfoSpec::mc_deserialize(data)?.map(move |body| UpdateInfo(body))),
-            0x03 => Ok(TeamActionPlayerList::mc_deserialize(data)?.map(move |body| AddPlayers(body))),
-            0x04 => Ok(TeamActionPlayerList::mc_deserialize(data)?.map(move |body| RemovePlayers(body))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!("invalid team action id {}", other)))
+            0x02 => {
+                Ok(TeamActionUpdateInfoSpec::mc_deserialize(data)?
+                    .map(move |body| UpdateInfo(body)))
+            }
+            0x03 => {
+                Ok(TeamActionPlayerList::mc_deserialize(data)?.map(move |body| AddPlayers(body)))
+            }
+            0x04 => Ok(
+                TeamActionPlayerList::mc_deserialize(data)?.map(move |body| RemovePlayers(body))
+            ),
+            other => Err(DeserializeErr::CannotUnderstandValue(format!(
+                "invalid team action id {}",
+                other
+            ))),
         }
     }
 }
@@ -1250,7 +1260,7 @@ impl TestRandom for TeamAction {
             2 => UpdateInfo(TeamActionUpdateInfoSpec::test_gen_random()),
             3 => AddPlayers(TeamActionPlayerList::test_gen_random()),
             4 => RemovePlayers(TeamActionPlayerList::test_gen_random()),
-            impossible => panic!("impossible condition because modulus {}", impossible)
+            impossible => panic!("impossible condition because modulus {}", impossible),
         }
     }
 }
@@ -1258,7 +1268,7 @@ impl TestRandom for TeamAction {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TeamMember {
     Player(String),
-    Entity(UUID4)
+    Entity(UUID4),
 }
 
 impl Serialize for TeamMember {
@@ -1266,7 +1276,7 @@ impl Serialize for TeamMember {
         use TeamMember::*;
         match self {
             Player(username) => username.mc_serialize(to),
-            Entity(entity_id) => entity_id.to_string().mc_serialize(to)
+            Entity(entity_id) => entity_id.to_string().mc_serialize(to),
         }
     }
 }
@@ -1346,13 +1356,13 @@ proto_byte_flag!(TeamFriendlyFlags,
 #[derive(Clone, Debug, PartialEq)]
 pub enum UpdateScoreAction {
     Upsert(VarInt),
-    Remove
+    Remove,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateScoreSpec {
     pub objective_name: String,
-    pub action: UpdateScoreAction
+    pub action: UpdateScoreAction,
 }
 
 impl Serialize for UpdateScoreSpec {
@@ -1360,7 +1370,7 @@ impl Serialize for UpdateScoreSpec {
         use UpdateScoreAction::*;
         to.serialize_byte(match self.action {
             Upsert(_) => 0x0,
-            Remove => 0x01
+            Remove => 0x01,
         })?;
         to.serialize_other(&self.objective_name)?;
         if let Upsert(value) = &self.action {
@@ -1373,20 +1383,36 @@ impl Serialize for UpdateScoreSpec {
 
 impl Deserialize for UpdateScoreSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: action_id, data } = u8::mc_deserialize(data)?;
-        let Deserialized { value: objective_name, data } = String::mc_deserialize(data)?;
+        let Deserialized {
+            value: action_id,
+            data,
+        } = u8::mc_deserialize(data)?;
+        let Deserialized {
+            value: objective_name,
+            data,
+        } = String::mc_deserialize(data)?;
 
         use UpdateScoreAction::*;
-        let Deserialized{ value: action, data } = match action_id {
+        let Deserialized {
+            value: action,
+            data,
+        } = match action_id {
             0x00 => Ok(VarInt::mc_deserialize(data)?.map(move |value| Upsert(value))),
             0x01 => Deserialized::ok(Remove, data),
-            other => DeserializeErr::CannotUnderstandValue(format!("invalid update score action {}", other)).into()
+            other => DeserializeErr::CannotUnderstandValue(format!(
+                "invalid update score action {}",
+                other
+            ))
+            .into(),
         }?;
 
-        Deserialized::ok(Self {
-            objective_name,
-            action,
-        }, data)
+        Deserialized::ok(
+            Self {
+                objective_name,
+                action,
+            },
+            data,
+        )
     }
 }
 
@@ -1416,7 +1442,7 @@ pub enum TitleActionSpec {
     SetActionBar(Chat),
     SetTimesAndDisplay(TitleTimesSpec),
     Hide,
-    Reset
+    Reset,
 }
 
 impl Serialize for TitleActionSpec {
@@ -1430,21 +1456,25 @@ impl Serialize for TitleActionSpec {
             SetTimesAndDisplay(_) => 0x03,
             Hide => 0x04,
             Reset => 0x05,
-        }).mc_serialize(to)?;
+        })
+        .mc_serialize(to)?;
 
         match self {
             SetTitle(body) => to.serialize_other(body),
             SetSubtitle(body) => to.serialize_other(body),
             SetActionBar(body) => to.serialize_other(body),
             SetTimesAndDisplay(body) => to.serialize_other(body),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
 
 impl Deserialize for TitleActionSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized{ value: action_id, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized {
+            value: action_id,
+            data,
+        } = VarInt::mc_deserialize(data)?;
 
         use TitleActionSpec::*;
 
@@ -1452,10 +1482,15 @@ impl Deserialize for TitleActionSpec {
             0x00 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetTitle(body))),
             0x01 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetSubtitle(body))),
             0x02 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetActionBar(body))),
-            0x03 => Ok(TitleTimesSpec::mc_deserialize(data)?.map(move |body| SetTimesAndDisplay(body))),
+            0x03 => {
+                Ok(TitleTimesSpec::mc_deserialize(data)?.map(move |body| SetTimesAndDisplay(body)))
+            }
             0x04 => Deserialized::ok(Hide, data),
             0x05 => Deserialized::ok(Reset, data),
-            other => DeserializeErr::CannotUnderstandValue(format!("invalid title action id {}", other)).into()
+            other => {
+                DeserializeErr::CannotUnderstandValue(format!("invalid title action id {}", other))
+                    .into()
+            }
         }
     }
 }
@@ -1472,7 +1507,7 @@ impl TestRandom for TitleActionSpec {
             3 => SetTimesAndDisplay(TitleTimesSpec::test_gen_random()),
             4 => Hide,
             5 => Reset,
-            _ => panic!("impossible condition, modulo 6")
+            _ => panic!("impossible condition, modulo 6"),
         }
     }
 }
@@ -1881,8 +1916,8 @@ pub struct PlayerInfoAction<A: Clone + PartialEq + Debug> {
 }
 
 impl<A> Serialize for PlayerInfoAction<A>
-    where
-        A: Serialize + Clone + PartialEq + Debug,
+where
+    A: Serialize + Clone + PartialEq + Debug,
 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         to.serialize_other(&self.uuid)?;
@@ -1891,8 +1926,8 @@ impl<A> Serialize for PlayerInfoAction<A>
 }
 
 impl<A> Deserialize for PlayerInfoAction<A>
-    where
-        A: Deserialize + Clone + PartialEq + Debug,
+where
+    A: Deserialize + Clone + PartialEq + Debug,
 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         let Deserialized { value: uuid, data } = UUID4::mc_deserialize(data)?;
@@ -1946,7 +1981,7 @@ impl PlayerInfoActionList {
             UpdateDisplayName(_) => 0x03,
             Remove(_) => 0x04,
         }
-            .into()
+        .into()
     }
 
     pub fn len(&self) -> usize {
@@ -2015,7 +2050,7 @@ impl Deserialize for PlayerInfoActionList {
 #[cfg(test)]
 impl TestRandom for PlayerInfoActionList {
     fn test_gen_random() -> Self {
-        PlayerInfoActionList::Remove( vec![UUID4::random()] )
+        PlayerInfoActionList::Remove(vec![UUID4::random()])
     }
 }
 
@@ -2150,7 +2185,7 @@ impl WorldBorderAction {
             SetWarningTime(_) => 0x04,
             SetWarningBlocks(_) => 0x05,
         }
-            .into()
+        .into()
     }
 }
 
@@ -2430,7 +2465,7 @@ impl InteractKind {
             Attack => 0x01,
             InteractAt(_) => 0x02,
         }
-            .into()
+        .into()
     }
 }
 
@@ -2623,7 +2658,7 @@ impl Recipe {
             CampfireCooking(_) => "minecraft:campfire_cooking",
             StoneCutting(_) => "minecraft:stonecutting",
         }
-            .to_owned()
+        .to_owned()
     }
 
     fn serialize_body<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -2719,10 +2754,10 @@ impl Deserialize for RecipeSpec {
                 other
             ))),
         }?
-            .map(move |recipe_body| RecipeSpec {
-                id: recipe_id,
-                recipe: recipe_body,
-            }))
+        .map(move |recipe_body| RecipeSpec {
+            id: recipe_id,
+            recipe: recipe_body,
+        }))
     }
 }
 
@@ -2980,7 +3015,10 @@ pub struct LightingUpdateSpec {
 
 impl Serialize for LightingUpdateSpec {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let ((skylight_update_mask, skylight_reset_mask), (blocklight_update_mask, blocklight_reset_mask)) = self.get_masks();
+        let (
+            (skylight_update_mask, skylight_reset_mask),
+            (blocklight_update_mask, blocklight_reset_mask),
+        ) = self.get_masks();
         to.serialize_other(&skylight_update_mask)?;
         to.serialize_other(&blocklight_update_mask)?;
         to.serialize_other(&skylight_reset_mask)?;
@@ -2992,22 +3030,43 @@ impl Serialize for LightingUpdateSpec {
 
 impl Deserialize for LightingUpdateSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: skylight_update_mask, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: blocklight_update_mask, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: skylight_reset_mask, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: blocklight_reset_mask, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: skylight_data, data } = Self::read_lighting_data_arrays(&skylight_update_mask, data)?;
-        let Deserialized { value: blocklight_data, data } = Self::read_lighting_data_arrays(&blocklight_update_mask, data)?;
+        let Deserialized {
+            value: skylight_update_mask,
+            data,
+        } = VarInt::mc_deserialize(data)?;
+        let Deserialized {
+            value: blocklight_update_mask,
+            data,
+        } = VarInt::mc_deserialize(data)?;
+        let Deserialized {
+            value: skylight_reset_mask,
+            data,
+        } = VarInt::mc_deserialize(data)?;
+        let Deserialized {
+            value: blocklight_reset_mask,
+            data,
+        } = VarInt::mc_deserialize(data)?;
+        let Deserialized {
+            value: skylight_data,
+            data,
+        } = Self::read_lighting_data_arrays(&skylight_update_mask, data)?;
+        let Deserialized {
+            value: blocklight_data,
+            data,
+        } = Self::read_lighting_data_arrays(&blocklight_update_mask, data)?;
 
-        Deserialized::ok(Self {
-            skylight_data,
-            blocklight_data,
+        Deserialized::ok(
+            Self {
+                skylight_data,
+                blocklight_data,
 
-            _cached_skylight_update_mask: Some(skylight_update_mask),
-            _cached_blocklight_update_mask: Some(blocklight_update_mask),
-            _cached_skylight_reset_mask: Some(skylight_reset_mask),
-            _cached_blocklight_reset_mask: Some(blocklight_reset_mask),
-        }, data)
+                _cached_skylight_update_mask: Some(skylight_update_mask),
+                _cached_blocklight_update_mask: Some(blocklight_update_mask),
+                _cached_skylight_reset_mask: Some(skylight_reset_mask),
+                _cached_blocklight_reset_mask: Some(blocklight_reset_mask),
+            },
+            data,
+        )
     }
 }
 
@@ -3016,24 +3075,58 @@ impl LightingUpdateSpec {
         let this = &mut *self;
         let skylight_data = &this.skylight_data;
         let blocklight_data = &this.blocklight_data;
-        Self::replace_optionals_if_needed((&mut this._cached_skylight_update_mask, &mut this._cached_skylight_reset_mask), move || Self::compute_masks_for(skylight_data));
-        Self::replace_optionals_if_needed((&mut this._cached_blocklight_update_mask, &mut this._cached_blocklight_reset_mask), move || Self::compute_masks_for(blocklight_data));
+        Self::replace_optionals_if_needed(
+            (
+                &mut this._cached_skylight_update_mask,
+                &mut this._cached_skylight_reset_mask,
+            ),
+            move || Self::compute_masks_for(skylight_data),
+        );
+        Self::replace_optionals_if_needed(
+            (
+                &mut this._cached_blocklight_update_mask,
+                &mut this._cached_blocklight_reset_mask,
+            ),
+            move || Self::compute_masks_for(blocklight_data),
+        );
     }
 
     pub fn get_masks(&self) -> ((VarInt, VarInt), (VarInt, VarInt)) {
         (
-            Self::read_or_compute((&self._cached_skylight_update_mask, &self._cached_skylight_reset_mask), || Self::compute_masks_for(&self.skylight_data)),
-            Self::read_or_compute((&self._cached_blocklight_update_mask, &self._cached_blocklight_reset_mask), || Self::compute_masks_for(&self.skylight_data))
+            Self::read_or_compute(
+                (
+                    &self._cached_skylight_update_mask,
+                    &self._cached_skylight_reset_mask,
+                ),
+                || Self::compute_masks_for(&self.skylight_data),
+            ),
+            Self::read_or_compute(
+                (
+                    &self._cached_blocklight_update_mask,
+                    &self._cached_blocklight_reset_mask,
+                ),
+                || Self::compute_masks_for(&self.skylight_data),
+            ),
         )
     }
 
-    fn read_lighting_data_arrays<'a>(mask: &VarInt, mut data: &'a [u8]) -> DeserializeResult<'a, LightingData> {
+    fn read_lighting_data_arrays<'a>(
+        mask: &VarInt,
+        mut data: &'a [u8],
+    ) -> DeserializeResult<'a, LightingData> {
         let mut out = vec![None; LIGHT_DATA_SECTIONS];
         for i in 0..LIGHT_DATA_SECTIONS {
             if (mask.0 & (1 << i)) != 0 {
-                let Deserialized { value: length, data: rest } = VarInt::mc_deserialize(data)?;
+                let Deserialized {
+                    value: length,
+                    data: rest,
+                } = VarInt::mc_deserialize(data)?;
                 if (length.0 as usize) != LIGHT_DATA_LENGTH {
-                    return DeserializeErr::CannotUnderstandValue(format!("all lighting update arrays are supposed to be 2048, got length of {}", length)).into();
+                    return DeserializeErr::CannotUnderstandValue(format!(
+                        "all lighting update arrays are supposed to be 2048, got length of {}",
+                        length
+                    ))
+                    .into();
                 }
 
                 if rest.len() < LIGHT_DATA_LENGTH {
@@ -3058,7 +3151,7 @@ impl LightingUpdateSpec {
             match data[i] {
                 Some(_) => {
                     update_mask |= 1 << i;
-                },
+                }
                 None => {
                     reset_mask |= 1 << i;
                 }
@@ -3068,7 +3161,12 @@ impl LightingUpdateSpec {
         (VarInt(update_mask), VarInt(reset_mask))
     }
 
-    fn replace_optionals_if_needed<T1, T2, F>(targets: (&mut Option<T1>, &mut Option<T2>), update: F) where F: FnOnce() -> (T1, T2) {
+    fn replace_optionals_if_needed<T1, T2, F>(
+        targets: (&mut Option<T1>, &mut Option<T2>),
+        update: F,
+    ) where
+        F: FnOnce() -> (T1, T2),
+    {
         let (a, b) = targets;
         if a.is_none() || b.is_none() {
             let (v_a, v_b) = update();
@@ -3077,7 +3175,12 @@ impl LightingUpdateSpec {
         }
     }
 
-    fn read_or_compute<T1, T2, F>(targets: (&Option<T1>, &Option<T2>), update: F) -> (T1, T2) where F: FnOnce() -> (T1, T2), T1: Copy, T2: Copy {
+    fn read_or_compute<T1, T2, F>(targets: (&Option<T1>, &Option<T2>), update: F) -> (T1, T2)
+    where
+        F: FnOnce() -> (T1, T2),
+        T1: Copy,
+        T2: Copy,
+    {
         let (a, b) = targets;
         if a.is_none() || b.is_none() {
             let (v_a, v_b) = update();
@@ -3102,8 +3205,10 @@ impl LightingUpdateSpec {
 #[cfg(test)]
 impl TestRandom for LightingUpdateSpec {
     fn test_gen_random() -> Self {
-        let (skylight_update_mask, skylight_reset_mask, skylight_data) = Self::gen_random_lighting_data();
-        let (blocklight_update_mask, blocklight_reset_mask, blocklight_data) = Self::gen_random_lighting_data();
+        let (skylight_update_mask, skylight_reset_mask, skylight_data) =
+            Self::gen_random_lighting_data();
+        let (blocklight_update_mask, blocklight_reset_mask, blocklight_data) =
+            Self::gen_random_lighting_data();
 
         Self {
             skylight_data,
@@ -3112,7 +3217,7 @@ impl TestRandom for LightingUpdateSpec {
             _cached_skylight_update_mask: Some(skylight_update_mask),
             _cached_blocklight_update_mask: Some(blocklight_update_mask),
             _cached_skylight_reset_mask: Some(skylight_reset_mask),
-            _cached_blocklight_reset_mask: Some(blocklight_reset_mask)
+            _cached_blocklight_reset_mask: Some(blocklight_reset_mask),
         }
     }
 }

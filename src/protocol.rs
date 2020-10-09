@@ -44,8 +44,13 @@ impl fmt::Display for PacketErr {
         use PacketErr::*;
         match self {
             UnknownId(id) => f.write_fmt(format_args!("unknown packet id {:?}", id)),
-            DeserializeFailed(err) => f.write_fmt(format_args!("failed to deserialize packet: {:?}", err)),
-            ExtraData(data) => f.write_fmt(format_args!("extra data unparsed at end of packet: {:?}", data))
+            DeserializeFailed(err) => {
+                f.write_fmt(format_args!("failed to deserialize packet: {:?}", err))
+            }
+            ExtraData(data) => f.write_fmt(format_args!(
+                "extra data unparsed at end of packet: {:?}",
+                data
+            )),
         }
     }
 }
@@ -61,7 +66,7 @@ impl std::error::Error for PacketErr {}
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawPacket<'a, I> {
     pub id: I,
-    pub data: &'a[u8],
+    pub data: &'a [u8],
 }
 
 pub trait ProtocolType: Serialize + Deserialize {}
@@ -591,7 +596,10 @@ macro_rules! counted_array_type {
             }
         }
 
-        impl<'a, T> IntoIterator for &'a mut $name<T> where T: Debug + Clone + PartialEq {
+        impl<'a, T> IntoIterator for &'a mut $name<T>
+        where
+            T: Debug + Clone + PartialEq,
+        {
             type Item = &'a mut T;
             type IntoIter = std::slice::IterMut<'a, T>;
 
@@ -601,7 +609,10 @@ macro_rules! counted_array_type {
             }
         }
 
-        impl<'a, T> IntoIterator for &'a $name<T> where T: Debug + Clone + PartialEq {
+        impl<'a, T> IntoIterator for &'a $name<T>
+        where
+            T: Debug + Clone + PartialEq,
+        {
             type Item = &'a T;
             type IntoIter = std::slice::Iter<'a, T>;
 
@@ -611,7 +622,10 @@ macro_rules! counted_array_type {
             }
         }
 
-        impl<T> IntoIterator for $name<T> where T: Debug + Clone + PartialEq {
+        impl<T> IntoIterator for $name<T>
+        where
+            T: Debug + Clone + PartialEq,
+        {
             type Item = T;
             type IntoIter = std::vec::IntoIter<T>;
 

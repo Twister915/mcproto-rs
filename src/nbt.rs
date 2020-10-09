@@ -31,10 +31,10 @@ impl TestRandom for NamedTag {
     fn test_gen_random() -> Self {
         Self {
             name: "".to_owned(),
-            payload: Tag::Compound(vec!(Self{
+            payload: Tag::Compound(vec![Self {
                 name: String::test_gen_random(),
                 payload: Tag::test_gen_random(),
-            })),
+            }]),
         }
     }
 }
