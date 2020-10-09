@@ -2453,7 +2453,7 @@ __protocol_body_def_helper!(InteractAtSpec {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum InteractKind {
-    Interact,
+    Interact(Hand),
     Attack,
     InteractAt(InteractAtSpec),
 }
@@ -2462,7 +2462,7 @@ impl InteractKind {
     pub fn id(&self) -> VarInt {
         use InteractKind::*;
         match self {
-            Interact => 0x00,
+            Interact(_) => 0x00,
             Attack => 0x01,
             InteractAt(_) => 0x02,
         }
@@ -2478,6 +2478,7 @@ impl Serialize for InteractKind {
         use InteractKind::*;
         match self {
             InteractAt(body) => to.serialize_other(body),
+            Interact(hand) => to.serialize_other(hand),
             _ => Ok(()),
         }
     }
@@ -2489,7 +2490,7 @@ impl Deserialize for InteractKind {
 
         use InteractKind::*;
         match id.0 {
-            0x00 => Deserialized::ok(Interact, data),
+            0x00 => Ok(Hand::mc_deserialize(data)?.map(move |hand| Interact(hand))),
             0x01 => Deserialized::ok(Attack, data),
             0x02 => Ok(InteractAtSpec::mc_deserialize(data)?.map(move |body| InteractAt(body))),
             other => Err(DeserializeErr::CannotUnderstandValue(format!(
@@ -2503,7 +2504,7 @@ impl Deserialize for InteractKind {
 #[cfg(test)]
 impl TestRandom for InteractKind {
     fn test_gen_random() -> Self {
-        InteractKind::Attack
+        InteractKind::Interact(Hand::test_gen_random())
     }
 }
 
