@@ -731,7 +731,9 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
     PlayResourcePackStatus, 0x1F, Play, ServerBound => PlayResourcePackStatusSpec {
         status: ResourcePackStatus
     },
-    // todo advancement tab
+    PlayAdvancementTab, 0x20, Play, ServerBound => PlayAdvancementTabSpec {
+        action: AdvancementTabAction
+    },
     PlaySelectTrade, 0x21, Play, ServerBound => PlaySelectTradeSpec {
         selected_slot: VarInt
     },
@@ -2735,6 +2737,54 @@ proto_varint_enum!(ResourcePackStatus,
     0x03 :: Accepted
 );
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum AdvancementTabAction {
+    Opened(String),
+    Closed
+}
+
+impl Serialize for AdvancementTabAction {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use AdvancementTabAction::*;
+
+        to.serialize_other(&VarInt(match self {
+            Opened(_) => 0x00,
+            Closed => 0x01
+        }))?;
+
+        match self {
+            Opened(identifier) => to.serialize_other(identifier),
+            _ => Ok(())
+        }
+    }
+}
+
+impl Deserialize for AdvancementTabAction {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        use AdvancementTabAction::*;
+
+        let Deserialized { value: action_id, data } = VarInt::mc_deserialize(data)?;
+        match action_id.0 {
+            0x00 => Ok(String::mc_deserialize(data)?.map(move |id| Opened(id))),
+            0x01 => Deserialized::ok(Closed, data),
+            other => Err(DeserializeErr::CannotUnderstandValue(format!("bad advancement tab action id {}", other)))
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for AdvancementTabAction {
+    fn test_gen_random() -> Self {
+        use AdvancementTabAction::*;
+
+        if rand::random::<bool>() {
+            Opened(String::test_gen_random())
+        } else {
+            Closed
+        }
+    }
+}
+
 proto_varint_enum!(CommandBlockMode,
     0x00 :: Sequence,
     0x01 :: Auto,
@@ -4612,6 +4662,15 @@ pub mod tests {
         test_play_resource_pack_status,
         bench_write_play_resource_pack_status,
         bench_read_play_resource_pack_status
+    );
+
+    packet_test_cases!(
+        Packet578,
+        PlayAdvancementTab,
+        PlayAdvancementTabSpec,
+        test_play_advancement_tab,
+        bench_write_play_advancement_tab,
+        bench_read_play_advancement_tab
     );
 
     packet_test_cases!(
