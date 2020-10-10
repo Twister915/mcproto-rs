@@ -562,9 +562,11 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         pitch: Angle,
         on_ground: bool
     },
-    // todo advancements
     PlayAdvancements, 0x58, Play, ClientBound => PlayAdvancementsSpec {
-        raw: RemainingBytes
+        reset: bool,
+        mappings: VarIntCountedArray<AdvancementMappingEntrySpec>,
+        identifiers: VarIntCountedArray<String>,
+        progress: VarIntCountedArray<AdvancementProgressEntrySpec>
     },
     PlayEntityProperties, 0x59, Play, ClientBound => PlayEntityPropertiesSpec {
         entity_id: VarInt,
@@ -720,7 +722,9 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         forward: f32,
         flags: SteerVehicleFlags
     },
-    // todo recipe book data
+    PlayRecipeBookData, 0x1D, Play, ServerBound => PlayRecipeBookDataSpec {
+        status: RecipeBookStatus
+    },
     PlayNameItem, 0x1E, Play, ServerBound => PlayNameItemSpec {
         name: String
     },
@@ -2379,6 +2383,121 @@ impl TestRandom for ScoreboardObjectiveAction {
     }
 }
 
+__protocol_body_def_helper!(AdvancementMappingEntrySpec {
+    key: String,
+    value: AdvancementSpec
+});
+
+__protocol_body_def_helper!(AdvancementSpec {
+    parent: Option<String>,
+    display: Option<AdvancementDisplaySpec>,
+    criteria: VarIntCountedArray<String>,
+    requirements: VarIntCountedArray<VarIntCountedArray<String>>
+});
+
+__protocol_body_def_helper!(AdvancementDisplaySpec {
+    title: Chat,
+    description: Chat,
+    icon: Option<Slot>,
+    frame_type: AdvancementFrameType,
+    flags: AdvancementDisplayFlags,
+    x: f32,
+    y: f32
+});
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdvancementDisplayFlags {
+    pub background_texture: Option<String>,
+    pub show_toast: bool,
+    pub hidden: bool
+}
+
+impl Serialize for AdvancementDisplayFlags {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        let mut raw_flags: i32 = 0;
+        if self.background_texture.is_some() {
+            raw_flags |= 0x01;
+        }
+        if self.show_toast {
+            raw_flags |= 0x02;
+        }
+        if self.hidden {
+            raw_flags |= 0x04;
+        }
+
+        to.serialize_other(&raw_flags)?;
+        if let Some(texture) = &self.background_texture {
+            to.serialize_other(texture)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Deserialize for AdvancementDisplayFlags {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized{ value: raw_flags, data } = i32::mc_deserialize(data)?;
+        let has_background_texture = raw_flags & 0x01 != 0;
+        let show_toast = raw_flags & 0x02 != 0;
+        let hidden = raw_flags & 0x04 != 0;
+
+        Ok(if has_background_texture {
+            String::mc_deserialize(data)?.map(move |id| Some(id))
+        } else {
+            Deserialized { value: None, data }
+        }.map(move |background_texture| {
+            Self {
+                background_texture,
+                show_toast,
+                hidden
+            }
+        }))
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for AdvancementDisplayFlags {
+    fn test_gen_random() -> Self {
+        let background_texture = if rand::random::<bool>() {
+            Some(String::test_gen_random())
+        } else {
+            None
+        };
+        let show_toast = rand::random::<bool>();
+        let hidden = rand::random::<bool>();
+
+        Self {
+            background_texture,
+            show_toast,
+            hidden
+        }
+    }
+}
+
+proto_varint_enum!(AdvancementFrameType,
+    0x00 :: Task,
+    0x01 :: Challenge,
+    0x02 :: Goal
+);
+
+__protocol_body_def_helper!(AdvancementProgressEntrySpec {
+    key: String,
+    value: AdvancementProgressSpec
+});
+
+__protocol_body_def_helper!(AdvancementProgressSpec {
+    criteria: VarIntCountedArray<AdvancementCriteriaSpec>
+});
+
+__protocol_body_def_helper!(AdvancementCriteriaSpec {
+    identifier: String,
+    progress: AdvancementCriterionProgressSpec
+});
+
+__protocol_body_def_helper!(AdvancementCriterionProgressSpec {
+    achieved_at: Option<i64>
+});
+
 __protocol_body_def_helper!(EntityPropertySpec {
     key: String,
     value: f64,
@@ -2550,6 +2669,64 @@ proto_byte_flag!(SteerVehicleFlags,
     0x01 :: jump,
     0x02 :: unmount
 );
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum RecipeBookStatus {
+    Displayed(String),
+    States(RecipeBookStates)
+}
+
+impl Serialize for RecipeBookStatus {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use RecipeBookStatus::*;
+        to.serialize_other(&VarInt(match self {
+            Displayed(_) => 0x00,
+            States(_) => 0x01
+        }))?;
+
+        match self {
+            Displayed(body) => to.serialize_other(body),
+            States(body) => to.serialize_other(body),
+        }
+    }
+}
+
+impl Deserialize for RecipeBookStatus {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: type_id, data } = VarInt::mc_deserialize(data)?;
+        use RecipeBookStatus::*;
+        match type_id.0 {
+            0x00 => Ok(String::mc_deserialize(data)?.map(move |identifier| Displayed(identifier))),
+            0x01 => Ok(RecipeBookStates::mc_deserialize(data)?.map(move |states| States(states))),
+            other => Err(DeserializeErr::CannotUnderstandValue(format!("invalid recipe book action type {}", other)))
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for RecipeBookStatus {
+    fn test_gen_random() -> Self {
+        use RecipeBookStatus::*;
+
+        let rand_bool = rand::random::<bool>();
+        if rand_bool {
+            Displayed(String::test_gen_random())
+        } else {
+            States(RecipeBookStates::test_gen_random())
+        }
+    }
+}
+
+__protocol_body_def_helper!(RecipeBookStates {
+    crafting_book_open: bool,
+    craftinb_filter_active: bool,
+    smelting_book_open: bool,
+    smelting_filter_active: bool,
+    blasting_book_open: bool,
+    blasting_filter_active: bool,
+    smoking_book_open: bool,
+    smoking_filter_active: bool
+});
 
 proto_varint_enum!(ResourcePackStatus,
     0x00 :: Loaded,
@@ -4408,6 +4585,15 @@ pub mod tests {
         test_play_steer_vehicle,
         bench_write_play_steer_vehicle,
         bench_read_play_steer_vehicle
+    );
+
+    packet_test_cases!(
+        Packet578,
+        PlayRecipeBookData,
+        PlayRecipeBookDataSpec,
+        test_play_recipe_book_data,
+        bench_write_play_recipe_book_data,
+        bench_read_play_recipe_book_data
     );
 
     packet_test_cases!(
