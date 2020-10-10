@@ -903,10 +903,10 @@ impl<'de> Deserialize<'de> for Chat {
                 self.visit_string(value.to_string())
             }
 
-            fn visit_string<E>(self, value: String) -> Result<Self::Value, E> where E: de::Error {
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> where E: de::Error {
                 Ok(Chat::Text(TextComponent {
                     base: BaseComponent::default(),
-                    text: value,
+                    text: value.to_owned(),
                 }))
             }
 
