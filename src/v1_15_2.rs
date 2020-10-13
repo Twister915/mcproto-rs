@@ -213,9 +213,9 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         length: VarInt,
         matches: VarIntCountedArray<TabCompleteMatch>
     },
-    // SKIP PlayDeclareCommands
     PlayDeclareCommands, 0x12, Play, ClientBound => PlayDeclareCommandsSpec {
-        raw_data: RemainingBytes
+        nodes: VarIntCountedArray<CommandNodeSpec>,
+        root_index: VarInt
     },
     PlayServerWindowConfirmation, 0x13, Play, ClientBound => PlayServerWindowConfirmationSpec {
         window_id: u8,
@@ -539,7 +539,9 @@ define_protocol!(Packet578, PacketDirection, State, i32, Id => {
         volume: f32,
         pitch: f32
     },
-    // todo stop sound
+    PlayStopSound, 0x53, Play, ClientBound => PlayStopSoundSpec {
+        spec: StopSoundSpec
+    },
     PlayerPlayerListHeaderAndFooter, 0x54, Play, ClientBound => PlayPlayerListHeaderAndFooterSpec {
         header: Chat,
         footer: Chat
@@ -1267,6 +1269,543 @@ __protocol_body_def_helper!(TabCompleteMatch {
 });
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct CommandNodeSpec {
+    pub children_indices: VarIntCountedArray<VarInt>,
+    pub redirect_node: Option<VarInt>,
+    pub is_executable: bool,
+    pub node: CommandNode,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CommandNode {
+    Root,
+    Argument(CommandArgumentNodeSpec),
+    Literal(CommandLiteralNodeSpec)
+}
+
+impl Serialize for CommandNodeSpec {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        let mut flags: u8 = 0;
+
+        use CommandNode::*;
+
+        flags |= match &self.node {
+            Root => 0x00,
+            Literal(_) => 0x01,
+            Argument(_) => 0x02,
+        };
+
+        if self.is_executable {
+            flags |= 0x04;
+        }
+
+        if self.redirect_node.is_some() {
+            flags |= 0x08;
+        }
+
+        if let Argument(body) = &self.node {
+            if body.suggestions_types.is_some() {
+                flags |= 0x10
+            }
+        }
+
+        to.serialize_byte(flags)?;
+        to.serialize_other(&self.children_indices)?;
+        if let Some(redirect_node) = &self.redirect_node {
+            to.serialize_other(redirect_node)?;
+        }
+
+        match &self.node {
+            Root => Ok(()),
+            Argument(body) => body.serialize(to),
+            Literal(body) => to.serialize_other(body),
+        }
+    }
+}
+
+impl Deserialize for CommandNodeSpec {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: flags, data } = u8::mc_deserialize(data)?;
+        let Deserialized { value: children_indices, data } = <VarIntCountedArray<VarInt>>::mc_deserialize(data)?;
+        let (redirect_node, data) = if flags & 0x08 != 0 {
+            let Deserialized { value: redirect_node, data } = VarInt::mc_deserialize(data)?;
+            (Some(redirect_node), data)
+        } else {
+            (None, data)
+        };
+
+        let is_executable = flags & 0x04 != 0;
+
+        use CommandNode::*;
+        let Deserialized{ value: node, data } = match flags & 0x03 {
+            0x00 => Deserialized::ok(Root, data),
+            0x01 => Ok(CommandLiteralNodeSpec::mc_deserialize(data)?.map(move |body| Literal(body))),
+            0x02 => Ok(CommandArgumentNodeSpec::deserialize(flags & 0x10 != 0, data)?.map(move |body| Argument(body))),
+            other => panic!("impossible condition (bitmask) {}", other)
+        }?;
+
+        Deserialized::ok(Self {
+            children_indices,
+            redirect_node,
+            is_executable,
+            node
+        }, data)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for CommandNodeSpec {
+    fn test_gen_random() -> Self {
+        let children_indices = <VarIntCountedArray<VarInt>>::test_gen_random();
+        let redirect_node = <Option<VarInt>>::test_gen_random();
+        let is_executable = rand::random::<bool>();
+        let idx = rand::random::<usize>() % 3;
+        let node = match idx {
+            0 => CommandNode::Root,
+            1 => CommandNode::Argument(CommandArgumentNodeSpec::test_gen_random()),
+            2 => CommandNode::Literal(CommandLiteralNodeSpec::test_gen_random()),
+            other => panic!("impossible state {}", other)
+        };
+
+        Self {
+            children_indices,
+            redirect_node,
+            is_executable,
+            node,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CommandArgumentNodeSpec {
+    pub name: String,
+    pub parser: CommandParserSpec,
+    pub suggestions_types: Option<SuggestionsTypeSpec>
+}
+
+impl CommandArgumentNodeSpec {
+    fn serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        to.serialize_other(&self.name)?;
+        to.serialize_other(&self.parser)?;
+        if let Some(suggestions_types) = &self.suggestions_types {
+            to.serialize_other(suggestions_types)?;
+        }
+
+        Ok(())
+    }
+
+    fn deserialize(has_suggestion_types: bool, data: &[u8]) -> DeserializeResult<Self> {
+        let Deserialized { value: name, data } = String::mc_deserialize(data)?;
+        let Deserialized { value: parser, data } = CommandParserSpec::mc_deserialize(data)?;
+        let (suggestions_types, data) = if has_suggestion_types {
+            let Deserialized { value: suggestions_types, data } = SuggestionsTypeSpec::mc_deserialize(data)?;
+            (Some(suggestions_types), data)
+        } else {
+            (None, data)
+        };
+
+        Deserialized::ok(Self {
+            name,
+            parser,
+            suggestions_types
+        }, data)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for CommandArgumentNodeSpec {
+    fn test_gen_random() -> Self {
+        let name = String::test_gen_random();
+        let suggestions_types = <Option<SuggestionsTypeSpec>>::test_gen_random();
+        let parser = CommandParserSpec::test_gen_random();
+
+        Self {
+            name,
+            parser,
+            suggestions_types,
+        }
+    }
+}
+
+proto_str_enum!(SuggestionsTypeSpec,
+    "minecraft:ask_server" :: AskServer,
+    "minecraft:all_recipes" :: AllRecipes,
+    "minecraft:available_sounds" :: AvailableSounds,
+    "minecraft:summonable_entities" :: SummonableEntities
+);
+
+__protocol_body_def_helper!(CommandLiteralNodeSpec {
+    name: String
+});
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CommandParserSpec {
+    Bool,
+    Double(DoubleParserProps),
+    Float(FloatParserProps),
+    Integer(IntegerParserProps),
+    StringParser(StringParserMode),
+    Entity(EntityParserFlags),
+    GameProfile,
+    BlockPosition,
+    ColumnPosition,
+    Vec3,
+    Vec2,
+    BlockState,
+    BlockPredicate,
+    ItemStack,
+    ItemPredicate,
+    Color,
+    Component,
+    Message,
+    Nbt,
+    NbtPath,
+    Objective,
+    ObjectiveCriteria,
+    Operation,
+    Particle,
+    Rotation,
+    ScoreboardSlot,
+    ScoreHolder(ScoreHolderFlags),
+    Swizzle,
+    Team,
+    ItemSlot,
+    ResourceLocation,
+    MobEffect,
+    Function,
+    EntityAnchor,
+    Range(RangeParserProps),
+    IntRange,
+    FloatRange,
+    ItemEnchantment,
+    EntitySummon,
+    Dimension,
+    UUID,
+    NbtTag,
+    NbtCompoundTag,
+    Time
+}
+
+impl Serialize for CommandParserSpec {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use CommandParserSpec::*;
+
+        let name = self.name().to_owned();
+        to.serialize_other(&name)?;
+
+        match self {
+            Double(body) => to.serialize_other(body),
+            Float(body) => to.serialize_other(body),
+            Integer(body) => to.serialize_other(body),
+            StringParser(body) => to.serialize_other(body),
+            Entity(body) => to.serialize_other(body),
+            ScoreHolder(body) => to.serialize_other(body),
+            Range(body) => to.serialize_other(body),
+            _ => Ok(())
+        }
+    }
+}
+
+impl Deserialize for CommandParserSpec {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized{ value: identifier, data} = String::mc_deserialize(data)?;
+
+        use CommandParserSpec::*;
+
+        match identifier.as_str() {
+            "brigadier:bool" => Deserialized::ok(Bool, data),
+            "brigadier:double" => Ok(DoubleParserProps::mc_deserialize(data)?.map(move |body| Double(body))),
+            "brigadier:float" => Ok(FloatParserProps::mc_deserialize(data)?.map(move |body| Float(body))),
+            "brigadier:integer" => Ok(IntegerParserProps::mc_deserialize(data)?.map(move |body| Integer(body))),
+            "brigadier:string" => Ok(StringParserMode::mc_deserialize(data)?.map(move |body| StringParser(body))),
+            "minecraft:entity" => Ok(EntityParserFlags::mc_deserialize(data)?.map(move |body| Entity(body))),
+            "minecraft:game_profile" => Deserialized::ok(GameProfile, data),
+            "minecraft:block_pos" => Deserialized::ok(BlockPosition, data),
+            "minecraft:column_pos" => Deserialized::ok(ColumnPosition, data),
+            "minecraft:vec3" => Deserialized::ok(Vec3, data),
+            "minecraft:vec2" => Deserialized::ok(Vec2, data),
+            "minecraft:block_state" => Deserialized::ok(BlockState, data),
+            "minecraft:block_predicate" => Deserialized::ok(BlockPredicate, data),
+            "minecraft:item_stack" => Deserialized::ok(ItemStack, data),
+            "minecraft:item_predicate" => Deserialized::ok(ItemPredicate, data),
+            "minecraft:color" => Deserialized::ok(Color, data),
+            "minecraft:component" => Deserialized::ok(Component, data),
+            "minecraft:message" => Deserialized::ok(Message, data),
+            "minecraft:nbt" => Deserialized::ok(Nbt, data),
+            "minecraft:nbt_path" => Deserialized::ok(NbtPath, data),
+            "minecraft:objective" => Deserialized::ok(Objective, data),
+            "minecraft:objective_criteria" => Deserialized::ok(ObjectiveCriteria, data),
+            "minecraft:operation" => Deserialized::ok(Operation, data),
+            "minecraft:particle" => Deserialized::ok(Particle, data),
+            "minecraft:rotation" => Deserialized::ok(Rotation, data),
+            "minecraft:scoreboard_slot" => Deserialized::ok(ScoreboardSlot, data),
+            "minecraft:score_holder" => Ok(ScoreHolderFlags::mc_deserialize(data)?.map(move |body| ScoreHolder(body))),
+            "minecraft:swizzle" => Deserialized::ok(Swizzle, data),
+            "minecraft:team" => Deserialized::ok(Team, data),
+            "minecraft:item_slot" => Deserialized::ok(ItemSlot, data),
+            "minecraft:resource_location" => Deserialized::ok(ResourceLocation, data),
+            "minecraft:mob_effect" => Deserialized::ok(MobEffect, data),
+            "minecraft:function" => Deserialized::ok(Function, data),
+            "minecraft:entity_anchor" => Deserialized::ok(EntityAnchor, data),
+            "minecraft:range" => Ok(RangeParserProps::mc_deserialize(data)?.map(move |body| Range(body))),
+            "minecraft:int_range" => Deserialized::ok(IntRange, data),
+            "minecraft:float_range" => Deserialized::ok(FloatRange, data),
+            "minecraft:item_enchantment" => Deserialized::ok(ItemEnchantment, data),
+            "minecraft:entity_summon" => Deserialized::ok(EntitySummon, data),
+            "minecraft:dimension" => Deserialized::ok(Dimension, data),
+            "minecraft:uuid" => Deserialized::ok(UUID, data),
+            "minecraft:nbt_tag" => Deserialized::ok(NbtTag, data),
+            "minecraft:nbt_compound_tag" => Deserialized::ok(NbtCompoundTag, data),
+            "minecraft:time" => Deserialized::ok(Time, data),
+            other => Err(DeserializeErr::CannotUnderstandValue(format!("unknown command argument parser id {}", other)))
+        }
+    }
+}
+
+impl CommandParserSpec {
+    pub fn name(&self) -> &str {
+        use CommandParserSpec::*;
+
+        match self {
+            Bool => "brigadier:bool",
+            Double(_) => "brigadier:double",
+            Float(_) => "brigadier:float",
+            Integer(_) => "brigadier:integer",
+            StringParser(_) => "brigadier:string",
+            Entity(_) => "minecraft:entity",
+            GameProfile => "minecraft:game_profile",
+            BlockPosition => "minecraft:block_pos",
+            ColumnPosition => "minecraft:column_pos",
+            Vec3 => "minecraft:vec3",
+            Vec2 => "minecraft:vec2",
+            BlockState => "minecraft:block_state",
+            BlockPredicate => "minecraft:block_predicate",
+            ItemStack => "minecraft:item_stack",
+            ItemPredicate => "minecraft:item_predicate",
+            Color => "minecraft:color",
+            Component => "minecraft:component",
+            Message => "minecraft:message",
+            Nbt => "minecraft:nbt",
+            NbtPath => "minecraft:nbt_path",
+            Objective => "minecraft:objective",
+            ObjectiveCriteria => "minecraft:objective_criteria",
+            Operation => "minecraft:operation",
+            Particle => "minecraft:particle",
+            Rotation => "minecraft:rotation",
+            ScoreboardSlot => "minecraft:scoreboard_slot",
+            ScoreHolder(_) => "minecraft:score_holder",
+            Swizzle => "minecraft:swizzle",
+            Team => "minecraft:team",
+            ItemSlot => "minecraft:item_slot",
+            ResourceLocation => "minecraft:resource_location",
+            MobEffect => "minecraft:mob_effect",
+            Function => "minecraft:function",
+            EntityAnchor => "minecraft:entity_anchor",
+            Range(_) => "minecraft:range",
+            IntRange => "minecraft:int_range",
+            FloatRange => "minecraft:float_range",
+            ItemEnchantment => "minecraft:item_enchantment",
+            EntitySummon => "minecraft:entity_summon",
+            Dimension => "minecraft:dimension",
+            UUID => "minecraft:uuid",
+            NbtTag => "minecraft:nbt_tag",
+            NbtCompoundTag => "minecraft:nbt_compound_tag",
+            Time => "minecraft:time",
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for CommandParserSpec {
+    fn test_gen_random() -> Self {
+        use CommandParserSpec::*;
+
+        match rand::random::<usize>() % 43 {
+            0 => Bool,
+            1 => Double(DoubleParserProps::test_gen_random()),
+            2 => Float(FloatParserProps::test_gen_random()),
+            3 => Integer(IntegerParserProps::test_gen_random()),
+            4 => StringParser(StringParserMode::test_gen_random()),
+            5 => Entity(EntityParserFlags::test_gen_random()),
+            6 => GameProfile,
+            7 => BlockPosition,
+            8 => ColumnPosition,
+            9 => Vec2,
+            10 => Vec3,
+            11 => BlockState,
+            12 => ItemStack,
+            13 => ItemPredicate,
+            14 => Color,
+            15 => Component,
+            16 => Message,
+            17 => Nbt,
+            18 => NbtPath,
+            19 => Objective,
+            20 => ObjectiveCriteria,
+            21 => Operation,
+            22 => Particle,
+            23 => Rotation,
+            24 => ScoreboardSlot,
+            25 => ScoreHolder(ScoreHolderFlags::test_gen_random()),
+            26 => Swizzle,
+            27 => Team,
+            28 => ItemSlot,
+            29 => ResourceLocation,
+            30 => MobEffect,
+            31 => Function,
+            32 => EntityAnchor,
+            33 => Range(RangeParserProps::test_gen_random()),
+            34 => IntRange,
+            35 => FloatRange,
+            36 => ItemEnchantment,
+            37 => EntitySummon,
+            38 => Dimension,
+            39 => UUID,
+            40 => NbtTag,
+            41 => NbtCompoundTag,
+            42 => Time,
+            other => panic!("impossible condition (modulo) {}", other),
+        }
+    }
+}
+
+pub struct NumParserProps<T> {
+    pub min: Option<T>,
+    pub max: Option<T>
+}
+
+pub type DoubleParserProps = NumParserProps<f64>;
+
+pub type FloatParserProps = NumParserProps<f32>;
+
+pub type IntegerParserProps = NumParserProps<i32>;
+
+impl<T> Copy for NumParserProps<T> where T: Copy {}
+
+impl<T> Clone for NumParserProps<T> where T: Clone {
+    fn clone(&self) -> Self {
+        Self {
+            min: self.min.clone(),
+            max: self.max.clone(),
+        }
+    }
+}
+
+impl<T> Debug for NumParserProps<T> where T: Debug {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NumParserProps(min={:?}, max={:?})", self.min, self.max)
+    }
+}
+
+impl<T> PartialEq for NumParserProps<T> where T: PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        other.max.eq(&self.max) && other.min.eq(&self.min)
+    }
+}
+
+impl<T> Serialize for NumParserProps<T> where T: Serialize {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        let mut flags: u8 = 0;
+        if self.min.is_some() {
+            flags |= 0x01;
+        }
+
+        if self.max.is_some() {
+            flags |= 0x02;
+        }
+
+        to.serialize_other(&flags)?;
+        if let Some(min) = &self.min {
+            to.serialize_other(min)?;
+        }
+
+        if let Some(max) = &self.max {
+            to.serialize_other(max)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<T> Deserialize for NumParserProps<T> where T: Deserialize {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: flags, data } = u8::mc_deserialize(data)?;
+        let (min, data) = if flags & 0x01 != 0 {
+            let Deserialized { value: min, data } = T::mc_deserialize(data)?;
+            (Some(min), data)
+        } else {
+            (None, data)
+        };
+
+        let (max, data) = if flags & 0x02 != 0 {
+            let Deserialized { value: max, data } = T::mc_deserialize(data)?;
+            (Some(max), data)
+        } else {
+            (None, data)
+        };
+
+        let out = Self {
+            min,
+            max,
+        };
+        Deserialized::ok(out, data)
+    }
+}
+
+#[cfg(test)]
+impl<T> TestRandom for NumParserProps<T> where
+    T: TestRandom + std::cmp::PartialOrd,
+    rand::distributions::Standard : rand::distributions::Distribution<T>,
+{
+    fn test_gen_random() -> Self {
+        let has_min = rand::random::<bool>();
+        let has_max = rand::random::<bool>();
+        let (min, max) = if has_min && has_max {
+            let a = rand::random::<T>();
+            let b = rand::random::<T>();
+            if a < b {
+                (Some(a), Some(b))
+            } else {
+                (Some(b), Some(a))
+            }
+        } else if !has_min && !has_max {
+            (None, None)
+        } else {
+            let v = rand::random::<T>();
+            if has_min {
+                (Some(v), None)
+            } else {
+                (None, Some(v))
+            }
+        };
+
+        Self {
+            min,
+            max
+        }
+    }
+}
+
+proto_varint_enum!(StringParserMode,
+    0x00 :: SingleWord,
+    0x01 :: QuotablePharse,
+    0x02 :: GreedyPhrase
+);
+
+proto_byte_flag!(EntityParserFlags,
+    0x01 :: single_target,
+    0x02 :: players_only
+);
+
+proto_byte_flag!(ScoreHolderFlags,
+    0x01 :: multiple
+);
+
+__protocol_body_def_helper!(RangeParserProps {
+    decimal: bool
+});
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum TeamAction {
     Create(TeamActionCreateSpec),
     Remove,
@@ -1607,6 +2146,87 @@ proto_varint_enum!(SoundCategory,
     0x08 :: Ambient,
     0x09 :: Voice
 );
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StopSoundSpec {
+    pub source: Option<SoundCategory>,
+    pub sound: Option<String>
+}
+
+impl Serialize for StopSoundSpec {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        let mut flags = 0;
+        if self.sound.is_some() && self.source.is_some() {
+            flags |= 0x03;
+        } else if self.sound.is_some() {
+            flags |= 0x02;
+        } else if self.source.is_some() {
+            flags |= 0x01;
+        }
+
+        to.serialize_byte(flags)?;
+        if let Some(source) = &self.source {
+            to.serialize_other(source)?;
+        }
+
+        if let Some(sound) = &self.sound {
+            to.serialize_other(sound)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Deserialize for StopSoundSpec {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: flags, data } = u8::mc_deserialize(data)?;
+
+        let is_both_present = flags & 0x03 != 0;
+        let is_source_present = is_both_present || flags & 0x01 != 0;
+        let is_sound_present = is_both_present || flags & 0x02 != 0;
+
+        let (source, data) = if is_source_present {
+            let Deserialized { value: source, data } = SoundCategory::mc_deserialize(data)?;
+            (Some(source), data)
+        } else {
+            (None, data)
+        };
+
+        let (sound, data) = if is_sound_present {
+            let Deserialized { value: sound, data } = String::mc_deserialize(data)?;
+            (Some(sound), data)
+        } else {
+            (None, data)
+        };
+
+        Deserialized::ok(Self {
+            source,
+            sound
+        }, data)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for StopSoundSpec {
+    fn test_gen_random() -> Self {
+        let source = if rand::random::<bool>() {
+            Some(SoundCategory::test_gen_random())
+        } else {
+            None
+        };
+
+        let sound = if source.is_none() || rand::random::<bool>() {
+            Some(String::test_gen_random())
+        } else {
+            None
+        };
+
+        Self {
+            source,
+            sound,
+        }
+    }
+}
 
 __protocol_body_def_helper!(ExplosionRecord {
     x: i8,
@@ -3273,7 +3893,7 @@ pub const LIGHT_DATA_LENGTH: usize = 2048;
 pub const LIGHT_DATA_SECTIONS: usize = 18;
 
 pub struct LightingData {
-    pub data: Vec<Option<[u8; LIGHT_DATA_LENGTH]>>,
+    pub data: Box<[Option<[u8; LIGHT_DATA_LENGTH]>; LIGHT_DATA_SECTIONS]>,
 
     _update_mask: Cell<Option<VarInt>>,
     _reset_mask: Cell<Option<VarInt>>,
@@ -3281,7 +3901,7 @@ pub struct LightingData {
 
 impl LightingData {
     fn deserialize(update_mask: VarInt, reset_mask: VarInt, mut data: &[u8]) -> DeserializeResult<Self> {
-        let mut out = Vec::with_capacity(LIGHT_DATA_SECTIONS);
+        let mut out = Box::new([None; LIGHT_DATA_SECTIONS]);
         for i in 0..LIGHT_DATA_SECTIONS {
             // gotta read the var int
             if update_mask.0 & (1 << i) != 0 {
@@ -3298,10 +3918,8 @@ impl LightingData {
                 let (section, rest) = data.split_at(LIGHT_DATA_LENGTH);
                 let mut to_vec = [0u8; LIGHT_DATA_LENGTH];
                 to_vec.copy_from_slice(section);
-                out.push(Some(to_vec));
+                out[i] = Some(to_vec);
                 data = rest;
-            } else {
-                out.push(None)
             }
         }
 
@@ -3355,7 +3973,7 @@ impl LightingData {
     }
 
     fn serialize_data<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        for item in &self.data {
+        for item in self.data.iter() {
             if let Some(contents) = item {
                 to.serialize_other(&VarInt(2048))?;
                 to.serialize_bytes(&contents[..])?;
@@ -3419,7 +4037,7 @@ impl LightingData {
 impl TestRandom for LightingData {
     fn test_gen_random() -> Self {
         let set_mask = Self::gen_random_mask();
-        let mut data = vec![None; LIGHT_DATA_SECTIONS];
+        let mut data = Box::new([None; LIGHT_DATA_SECTIONS]);
         for i in 0..LIGHT_DATA_SECTIONS {
             if (set_mask & (1 << i)) != 0 {
                 let mut data_arr = [0u8; LIGHT_DATA_LENGTH];
