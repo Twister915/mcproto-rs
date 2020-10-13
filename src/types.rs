@@ -210,11 +210,6 @@ impl TestRandom for f64 {
 const VAR_INT_BYTES: usize = 5;
 const VAR_LONG_BYTES: usize = 10;
 
-const DESERIALIZE_VAR_INT: impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> =
-    deserialize_var_num(VAR_INT_BYTES);
-const DESERIALIZE_VAR_LONG: impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> =
-    deserialize_var_num(VAR_LONG_BYTES);
-
 #[derive(Copy, Clone, PartialOrd, PartialEq, Debug, Default, Hash, Ord, Eq)]
 pub struct VarInt(pub i32);
 
@@ -227,7 +222,7 @@ impl Serialize for VarInt {
 
 impl Deserialize for VarInt {
     fn mc_deserialize(orig_data: &[u8]) -> DeserializeResult<Self> {
-        Ok(DESERIALIZE_VAR_INT(orig_data)?.map(move |v| VarInt(v as i32)))
+        Ok(deserialize_var_num(orig_data, VAR_INT_BYTES)?.map(move |v| VarInt(v as i32)))
     }
 }
 
@@ -281,7 +276,7 @@ impl Serialize for VarLong {
 
 impl Deserialize for VarLong {
     fn mc_deserialize(orig_data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(DESERIALIZE_VAR_LONG(orig_data)?.map(move |v| VarLong(v as i64)))
+        Ok(deserialize_var_num(orig_data, VAR_LONG_BYTES)?.map(move |v| VarLong(v as i64)))
     }
 }
 
@@ -316,33 +311,29 @@ fn serialize_var_num(data: u64, out: &mut [u8]) -> &[u8] {
     &out[..byte_idx]
 }
 
-const fn deserialize_var_num(
-    max_bytes: usize,
-) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, u64> {
-    move |orig_data| {
-        let mut data = orig_data;
-        let mut v: u64 = 0;
-        let mut bit_place: usize = 0;
-        let mut i: usize = 0;
-        let mut has_more = true;
+fn deserialize_var_num(orig_data: &[u8], max_bytes: usize) -> DeserializeResult<u64> {
+    let mut data = orig_data;
+    let mut v: u64 = 0;
+    let mut bit_place: usize = 0;
+    let mut i: usize = 0;
+    let mut has_more = true;
 
-        while has_more {
-            if i == max_bytes {
-                return DeserializeErr::VarNumTooLong(Vec::from(&orig_data[..i])).into();
-            }
-            let Deserialized {
-                value: byte,
-                data: rest,
-            } = read_one_byte(data)?;
-            data = rest;
-            has_more = byte & 0x80 != 0;
-            v |= ((byte as u64) & 0x7F) << bit_place;
-            bit_place += 7;
-            i += 1;
+    while has_more {
+        if i == max_bytes {
+            return DeserializeErr::VarNumTooLong(Vec::from(&orig_data[..i])).into();
         }
-
-        Deserialized::ok(v, data)
+        let Deserialized {
+            value: byte,
+            data: rest,
+        } = read_one_byte(data)?;
+        data = rest;
+        has_more = byte & 0x80 != 0;
+        v |= ((byte as u64) & 0x7F) << bit_place;
+        bit_place += 7;
+        i += 1;
     }
+
+    Deserialized::ok(v, data)
 }
 
 // STRING
