@@ -930,17 +930,88 @@ proto_byte_enum!(EntityAnimationKind,
     0x05 :: MagicCriticalEffect
 );
 
-proto_varint_enum!(StatisticCategory,
-    0x00 :: Mined,
-    0x01 :: Crafted,
-    0x02 :: Used,
-    0x03 :: Broken,
-    0x04 :: PickedUp,
-    0x05 :: Dropped,
-    0x06 :: Killed,
-    0x07 :: KilledBy,
-    0x08 :: Custom
-);
+#[derive(Clone, Debug, PartialEq)]
+pub enum StatisticCategory {
+    Mined(VarInt),
+    Crafted(VarInt),
+    Used(VarInt),
+    Broken(VarInt),
+    PickedUp(VarInt),
+    Dropped(VarInt),
+    Killed(VarInt),
+    KilledBy(VarInt),
+    Custom(StatisticKind),
+}
+
+impl Serialize for StatisticCategory {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        use StatisticCategory::*;
+
+        to.serialize_other(&VarInt(match self {
+            Mined(_) => 0x00,
+            Crafted(_) => 0x01,
+            Used(_) => 0x02,
+            Broken(_) => 0x03,
+            PickedUp(_) => 0x04,
+            Dropped(_) => 0x05,
+            Killed(_) => 0x06,
+            KilledBy(_) => 0x07,
+            Custom(_) => 0x08,
+        }))?;
+
+        match &self {
+            Mined(body) => to.serialize_other(body),
+            Crafted(body) => to.serialize_other(body),
+            Used(body) => to.serialize_other(body),
+            Broken(body) => to.serialize_other(body),
+            PickedUp(body) => to.serialize_other(body),
+            Dropped(body) => to.serialize_other(body),
+            Killed(body) => to.serialize_other(body),
+            KilledBy(body) => to.serialize_other(body),
+            Custom(body) => to.serialize_other(body),
+        }
+    }
+}
+
+impl Deserialize for StatisticCategory {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: category_id, data } = VarInt::mc_deserialize(data)?;
+        use StatisticCategory::*;
+        match category_id.0 {
+            0x00 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Mined(body))),
+            0x01 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Crafted(body))),
+            0x02 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Used(body))),
+            0x03 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Broken(body))),
+            0x04 => Ok(VarInt::mc_deserialize(data)?.map(move |body| PickedUp(body))),
+            0x05 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Dropped(body))),
+            0x06 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Killed(body))),
+            0x07 => Ok(VarInt::mc_deserialize(data)?.map(move |body| KilledBy(body))),
+            0x08 => Ok(StatisticKind::mc_deserialize(data)?.map(move |body| Custom(body))),
+            other => Err(DeserializeErr::CannotUnderstandValue(format!("unknown Statistic Category ID {:?}", other)))
+        }
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for StatisticCategory {
+    fn test_gen_random() -> Self {
+        let idx = rand::random::<usize>() % 9;
+
+        use StatisticCategory::*;
+        match idx {
+            0 => Mined(VarInt::test_gen_random()),
+            1 => Crafted(VarInt::test_gen_random()),
+            2 => Used(VarInt::test_gen_random()),
+            3 => Broken(VarInt::test_gen_random()),
+            4 => PickedUp(VarInt::test_gen_random()),
+            5 => Dropped(VarInt::test_gen_random()),
+            6 => Killed(VarInt::test_gen_random()),
+            7 => KilledBy(VarInt::test_gen_random()),
+            8 => Custom(StatisticKind::test_gen_random()),
+            other => panic!("impossible condition {}", other)
+        }
+    }
+}
 
 proto_varint_enum!(StatisticKind,
     0x00 :: LeaveGame,
