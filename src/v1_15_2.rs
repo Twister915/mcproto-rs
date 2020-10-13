@@ -2155,12 +2155,13 @@ pub struct StopSoundSpec {
 
 impl Serialize for StopSoundSpec {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        let has_sound = self.sound.is_some();
+        let has_source = self.source.is_some();
         let mut flags = 0;
-        if self.sound.is_some() && self.source.is_some() {
-            flags |= 0x03;
-        } else if self.sound.is_some() {
+        if has_sound {
             flags |= 0x02;
-        } else if self.source.is_some() {
+        }
+        if has_source {
             flags |= 0x01;
         }
 
@@ -2181,9 +2182,8 @@ impl Deserialize for StopSoundSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         let Deserialized { value: flags, data } = u8::mc_deserialize(data)?;
 
-        let is_both_present = flags & 0x03 != 0;
-        let is_source_present = is_both_present || flags & 0x01 != 0;
-        let is_sound_present = is_both_present || flags & 0x02 != 0;
+        let is_source_present = flags & 0x01 != 0;
+        let is_sound_present = flags & 0x02 != 0;
 
         let (source, data) = if is_source_present {
             let Deserialized { value: source, data } = SoundCategory::mc_deserialize(data)?;
