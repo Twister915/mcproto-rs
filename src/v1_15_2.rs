@@ -1067,8 +1067,7 @@ proto_varint_enum!(StatisticKind,
 );
 
 __protocol_body_def_helper!(Statistic {
-    category: StatisticCategory,
-    statistic: StatisticKind,
+    kind: StatisticCategory,
     value: VarInt
 });
 
