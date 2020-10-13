@@ -9,7 +9,7 @@ pub fn read_one_byte(data: &[u8]) -> DeserializeResult<u8> {
 }
 
 #[inline]
-pub const fn take(amount: usize) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, &'b [u8]> {
+pub fn take(amount: usize) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, &'b [u8]> {
     move |data| {
         if data.len() < amount {
             Err(DeserializeErr::Eof)
