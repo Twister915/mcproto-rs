@@ -1,9 +1,9 @@
 use crate::{types::*, uuid::*, *};
 use std::fmt::Debug;
+use std::cell::Cell;
 
 #[cfg(test)]
 use crate::protocol::TestRandom;
-use std::cell::Cell;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PacketDirection {
