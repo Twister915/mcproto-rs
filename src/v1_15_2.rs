@@ -4985,6 +4985,15 @@ pub mod tests {
 
     packet_test_cases!(
         Packet578,
+        PlayStopSound,
+        PlayStopSoundSpec,
+        test_play_stop_sound,
+        bench_write_play_stop_sound,
+        bench_read_play_stop_sound
+    );
+
+    packet_test_cases!(
+        Packet578,
         PlayerPlayerListHeaderAndFooter,
         PlayPlayerListHeaderAndFooterSpec,
         test_player_player_list_header_and_footer,
