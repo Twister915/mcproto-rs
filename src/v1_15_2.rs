@@ -42,7 +42,7 @@ impl State {
     }
 }
 
-define_protocol!(Packet578, RawPacket578, PacketDirection, State, i32, Id => {
+define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, State, i32, Id => {
     // handshaking
     Handshake, 0x00, Handshaking, ServerBound => HandshakeSpec {
         version: VarInt,

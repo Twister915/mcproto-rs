@@ -158,7 +158,7 @@ macro_rules! __protocol_body_def_helper {
 
 #[macro_export]
 macro_rules! define_protocol {
-    ($packett: ident, $rawpackett: ident, $directiont: ident, $statet: ident, $idt: ident, $idi: ident => { $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident { $($fnam: ident: $ftyp: ty),* }),*}) => {
+    ($packett: ident, $rawpackett: ident, $rawdt: ident, $directiont: ident, $statet: ident, $idt: ident, $idi: ident => { $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident { $($fnam: ident: $ftyp: ty),* }),*}) => {
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
         pub struct $idi {
             pub id: $idt,
@@ -189,7 +189,7 @@ macro_rules! define_protocol {
         $crate::as_item! {
             #[derive(Debug, PartialEq)]
             pub enum $rawpackett<'a> {
-                $($nam(&'a [u8])),*,
+                $($nam($rawdt<'a, $body>)),*,
             }
         }
 
@@ -272,7 +272,10 @@ macro_rules! define_protocol {
                 use crate::protocol::PacketErr::*;
 
                 match (value.id.id, value.id.state, value.id.direction) {
-                    $(($id, $state, $direction) => Ok($nam(value.data))),*,
+                    $(($id, $state, $direction) => Ok($nam($rawdt {
+                        data: value.data,
+                        _typ: std::marker::PhantomData,
+                    }))),*,
                     other => Err(UnknownId(other.0))
                 }
             }
@@ -292,7 +295,7 @@ macro_rules! define_protocol {
                 use self::$rawpackett::*;
 
                 match self {
-                    $($nam(data) => data),*
+                    $($nam(bod) => bod.data),*
                 }
             }
         }
@@ -317,7 +320,26 @@ macro_rules! define_protocol {
                 use self::$rawpackett::*;
 
                 match self {
-                    $($nam(data) => data),*
+                    $($nam(bod) => bod.data),*
+                }
+            }
+        }
+
+        #[derive(PartialEq, Debug)]
+        pub struct $rawdt<'a, T> {
+            pub data: &'a [u8],
+            _typ: std::marker::PhantomData<T>
+        }
+
+        impl<'a, T> $rawdt<'a, T> where T: crate::Deserialize {
+            pub fn into_deserialized(self) -> Result<T, crate::protocol::PacketErr> {
+                use crate::protocol::PacketErr::*;
+
+                let Deserialized { value: body, data: rest } = T::mc_deserialize(self.data).map_err(DeserializeFailed)?;
+                if !rest.is_empty() {
+                    Err(ExtraData(rest.to_vec()))
+                } else {
+                    Ok(body)
                 }
             }
         }
