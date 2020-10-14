@@ -332,7 +332,7 @@ macro_rules! define_protocol {
         }
 
         impl<'a, T> $rawdt<'a, T> where T: crate::Deserialize {
-            pub fn into_deserialized(self) -> Result<T, crate::protocol::PacketErr> {
+            pub fn deserialize(&self) -> Result<T, crate::protocol::PacketErr> {
                 use crate::protocol::PacketErr::*;
 
                 let Deserialized { value: body, data: rest } = T::mc_deserialize(self.data).map_err(DeserializeFailed)?;
