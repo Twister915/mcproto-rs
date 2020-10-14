@@ -158,7 +158,7 @@ macro_rules! __protocol_body_def_helper {
 
 #[macro_export]
 macro_rules! define_protocol {
-    ($packett: ident, $directiont: ident, $statet: ident, $idt: ident, $idi: ident => { $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident { $($fnam: ident: $ftyp: ty),* }),*}) => {
+    ($packett: ident, $rawpackett: ident, $directiont: ident, $statet: ident, $idt: ident, $idi: ident => { $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident { $($fnam: ident: $ftyp: ty),* }),*}) => {
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
         pub struct $idi {
             pub id: $idt,
@@ -183,6 +183,13 @@ macro_rules! define_protocol {
             #[derive(Debug, PartialEq, Clone)]
             pub enum $packett {
                 $($nam($body)),*,
+            }
+        }
+
+        $crate::as_item! {
+            #[derive(Debug, PartialEq)]
+            pub enum $rawpackett<'a> {
+                $($nam(&'a [u8])),*,
             }
         }
 
@@ -251,6 +258,66 @@ macro_rules! define_protocol {
                             )
                         }),*,
                     )
+                }
+            }
+        }
+
+        impl<'a> std::convert::TryFrom<crate::protocol::RawPacket<'a, $idi>> for $rawpackett<'a> {
+            type Error = crate::protocol::PacketErr;
+
+            fn try_from(value: crate::protocol::RawPacket<'a, $idi>) -> Result<Self, Self::Error> {
+                use self::$rawpackett::*;
+                use self::$statet::*;
+                use self::$directiont::*;
+                use crate::protocol::PacketErr::*;
+
+                match (value.id.id, value.id.state, value.id.direction) {
+                    $(($id, $state, $direction) => Ok($nam(value.data))),*,
+                    other => Err(UnknownId(other.0))
+                }
+            }
+        }
+
+        impl<'a> std::convert::Into<crate::protocol::RawPacket<'a, $idi>> for $rawpackett<'a> {
+            fn into(self) -> crate::protocol::RawPacket<'a, $idi> {
+                crate::protocol::RawPacket {
+                    id: self.id(),
+                    data: self.bytes(),
+                }
+            }
+        }
+
+        impl<'a> std::convert::Into<&'a [u8]> for $rawpackett<'a> {
+            fn into(self) -> &'a [u8] {
+                use self::$rawpackett::*;
+
+                match self {
+                    $($nam(data) => data),*
+                }
+            }
+        }
+
+        impl<'a> $rawpackett<'a> {
+            pub fn id(&self) -> $idi {
+                use self::$rawpackett::*;
+                use self::$statet::*;
+                use self::$directiont::*;
+
+                match self {
+                    $($nam(_) => ($id, $state, $direction)),*
+                }.into()
+            }
+
+            pub fn deserialize(self) -> Result<$packett, crate::protocol::PacketErr> {
+                use crate::protocol::Packet;
+                $packett::mc_deserialize(self.into())
+            }
+
+            pub fn bytes(&self) -> &'a [u8] {
+                use self::$rawpackett::*;
+
+                match self {
+                    $($nam(data) => data),*
                 }
             }
         }
