@@ -356,72 +356,80 @@ macro_rules! count_num {
 }
 
 #[macro_export]
+macro_rules! proto_enum_deserialize_variant {
+    ($data: ident, $ty: ident :: $nam: ident ($bod: ty)) => {
+        Ok(<$bod>::mc_deserialize($data)?.map(move |body| $ty::$nam(body)))
+    };
+    ($data: ident, $ty: ident :: $nam: ident) => {
+        Deserialized::ok($ty::$nam, $data)
+    };
+}
+
+#[macro_export]
+macro_rules! instead_of_ident {
+    ($ident: tt, $replacement: tt) => {
+        $replacement
+    }
+}
+
+#[macro_export]
 macro_rules! proto_enum_with_type {
-    ($typ: ty, $from_nam: ident, $as_nam: ident, $fmt: literal, $typname: ident, $(($bval: literal, $nam: ident)),*) => {
+    ($typ: ty, $typname: ident, $(($bval: literal, $nam: ident $(($bod: ty))?)),*) => {
         $crate::as_item! {
-            #[derive(PartialEq, Clone, Copy)]
+            #[derive(PartialEq, Clone, Debug)]
             pub enum $typname {
-                $($nam),*
+                $($nam $(($bod))?),*
             }
         }
 
         impl Serialize for $typname {
             fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-                to.serialize_other(&self.$as_nam())
+                let id_to_serialize: $typ = match self {
+                    $($typname::$nam$((instead_of_ident!($bod, _)))? => $bval),*
+                }.into();
+                to.serialize_other(&id_to_serialize)?;
+                self.serialize_body(to)
             }
         }
 
         impl Deserialize for $typname {
             fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
                 <$typ>::mc_deserialize(data)?.and_then(move |id, rest| {
-                    Self::$from_nam(id).map(move |val| {
-                        Deserialized::ok(val, rest)
-                    }).unwrap_or_else(|| Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} {}", stringify!($typname), id))))
+                    Self::deserialize_with_id(id, rest)
                 })
             }
         }
 
-        impl Into<$typ> for $typname {
-            fn into(self) -> $typ {
-                use $typname::*;
-                match self {
-                    $($nam => $bval.into()),*,
-                }
-            }
-        }
-
-        impl std::fmt::Display for $typname {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, $fmt, self.name(), self.$as_nam())?;
-                Ok(())
-            }
-        }
-
-        impl std::fmt::Debug for $typname {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, $fmt, self.name(), self.$as_nam())?;
-                Ok(())
-            }
-        }
-
         impl $typname {
-            pub fn $from_nam(b: $typ) -> Option<Self> {
-                use $typname::*;
-                match b.into() {
-                    $($bval => Some($nam)),*,
-                    _ => None
+            pub fn deserialize_with_id<'a>(id: $typ, data: &'a[u8]) -> DeserializeResult<'a, Self> {
+                match id.into() {
+                    $($bval => proto_enum_deserialize_variant!(data, $typname::$nam $(($bod))?)),*,
+                    other => {
+                        return Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} {:?}", stringify!($typname), other)))
+                    }
                 }
             }
 
             pub fn name(&self) -> &str {
-                use $typname::*;
                 match self {
-                    $($nam => stringify!($nam)),+,
+                    $($typname::$nam$((instead_of_ident!($bod, _)))? => stringify!($nam)),*
                 }
             }
 
-            pub fn $as_nam(&self) -> $typ {
-                (*self).into()
+            pub fn id(&self) -> $typ {
+                match self {
+                    $($typname::$nam$((instead_of_ident!($bod, _)))? => $bval.into()),*
+                }
+            }
+
+            #[allow(unused_variables)]
+            pub fn serialize_body<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                match &self {
+                    $($typname::$nam$((instead_of_ident!($bod, bod)))? => {
+                        $(to.serialize_other(instead_of_ident!($bod, bod))?;)?
+                        Ok(())
+                    }),*
+                }
             }
         }
 
@@ -432,7 +440,7 @@ macro_rules! proto_enum_with_type {
                 $(
                     idx -= 1;
                     if idx == 0 {
-                        return $typname::$nam;
+                        return $typname::$nam$((<$bod>::test_gen_random()))?;
                     }
                 )+
                 panic!("cannot generate random {}", stringify!($typname));
@@ -443,73 +451,76 @@ macro_rules! proto_enum_with_type {
 
 #[macro_export]
 macro_rules! proto_byte_enum {
-    ($typname: ident, $($bval: literal :: $nam: ident),*) => {
-        proto_enum_with_type!(u8, from_byte, as_byte, "{}(0x{:02x})", $typname, $(($bval, $nam)),*);
+    ($typname: ident, $($bval: literal :: $nam: ident $(($bod: ty))?),*) => {
+        proto_enum_with_type!(u8, $typname, $(($bval, $nam $(($bod))?)),*);
     }
 }
 
 #[macro_export]
 macro_rules! proto_varint_enum {
-    ($typname: ident, $($bval: literal :: $nam: ident),*) => {
-        proto_enum_with_type!(VarInt, from_varint, as_varint, "{}({:?})", $typname, $(($bval, $nam)),*);
+    ($typname: ident, $($bval: literal :: $nam: ident $(($bod: ty))?),*) => {
+        proto_enum_with_type!(VarInt, $typname, $(($bval, $nam $(($bod))?)),*);
     }
 }
 
 #[macro_export]
 macro_rules! proto_int_enum {
-    ($typname: ident, $($bval: literal :: $nam: ident),*) => {
-        proto_enum_with_type!(i32, from_int, as_int, "{}(0x{:02x})", $typname, $(($bval, $nam)),*);
+    ($typname: ident, $($bval: literal :: $nam: ident $(($bod: ty))?),*) => {
+        proto_enum_with_type!(i32, $typname, $(($bval, $nam $(($bod))?)),*);
     }
 }
 
 #[macro_export]
 macro_rules! proto_str_enum {
-    ($typname: ident, $($sval: literal :: $nam: ident),*) => {
+    ($typname: ident, $($sval: literal :: $nam: ident $(($bod: ident))?),*) => {
         crate::as_item! {
-            #[derive(PartialEq, Clone, Copy)]
+            #[derive(PartialEq, Clone, Debug)]
             pub enum $typname {
-                $($nam),+,
+                $($nam $(($bod))?),*
             }
         }
 
         impl Serialize for $typname {
             fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
                 let name = self.name().to_owned();
-                to.serialize_other(&name)
+                to.serialize_other(&name)?;
+                self.serialize_body(to)
             }
         }
 
         impl Deserialize for $typname {
             fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
                 String::mc_deserialize(data)?.and_then(move |name, rest| {
-                    if let Some(v) = Self::from_string(&name) {
-                        Deserialized::ok(v, rest)
-                    } else {
-                        Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} ident '{}'", stringify!($typname), name)))
-                    }
+                    Self::deserialize_with_id(name.as_str(), rest)
                 })
             }
         }
 
         impl $typname {
-            pub fn from_str(arg: &str) -> Option<Self> {
-                use $typname::*;
-
-                match arg {
-                    $($sval => Some($nam)),+,
-                    _ => None
+            pub fn name(&self) -> &str {
+                match self {
+                    $($typname::$nam$((instead_of_ident!($bod, _)))? => $sval),+,
                 }
             }
 
-            pub fn from_string(arg: &String) -> Option<Self> {
-                Self::from_str(arg.as_str())
+            pub fn id(&self) -> String {
+                self.name().to_owned()
             }
 
-            pub fn name(&self) -> &str {
-                use $typname::*;
+            pub fn deserialize_with_id<'a>(name: &str, data: &'a[u8]) -> DeserializeResult<'a, Self> {
+                match name {
+                    $($sval => proto_enum_deserialize_variant!(data, $typname::$nam $(($bod))?)),*,
+                    other => Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} ident '{}'", stringify!($typname), other)))
+                }
+            }
 
-                match self {
-                    $($nam => $sval),+,
+            #[allow(unused_variables)]
+            pub fn serialize_body<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                match &self {
+                    $($typname::$nam$((instead_of_ident!($bod, bod)))? => {
+                        $(to.serialize_other(instead_of_ident!($bod, bod))?;)?
+                        Ok(())
+                    }),*
                 }
             }
         }
@@ -526,18 +537,6 @@ macro_rules! proto_str_enum {
             }
         }
 
-        impl std::fmt::Display for $typname {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str(self.name())
-            }
-        }
-
-        impl std::fmt::Debug for $typname {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                <dyn std::fmt::Display>::fmt(self, f)
-            }
-        }
-
         #[cfg(test)]
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
@@ -545,7 +544,7 @@ macro_rules! proto_str_enum {
                 $(
                     idx -= 1;
                     if idx == 0 {
-                        return $typname::$nam;
+                        return $typname::$nam$(($bod::test_gen_random()))?;
                     }
                 )+
                 panic!("cannot generate random {}", stringify!($typname));

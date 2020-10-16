@@ -932,88 +932,17 @@ proto_byte_enum!(EntityAnimationKind,
     0x05 :: MagicCriticalEffect
 );
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum StatisticCategory {
-    Mined(VarInt),
-    Crafted(VarInt),
-    Used(VarInt),
-    Broken(VarInt),
-    PickedUp(VarInt),
-    Dropped(VarInt),
-    Killed(VarInt),
-    KilledBy(VarInt),
-    Custom(StatisticKind),
-}
-
-impl Serialize for StatisticCategory {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use StatisticCategory::*;
-
-        to.serialize_other(&VarInt(match self {
-            Mined(_) => 0x00,
-            Crafted(_) => 0x01,
-            Used(_) => 0x02,
-            Broken(_) => 0x03,
-            PickedUp(_) => 0x04,
-            Dropped(_) => 0x05,
-            Killed(_) => 0x06,
-            KilledBy(_) => 0x07,
-            Custom(_) => 0x08,
-        }))?;
-
-        match &self {
-            Mined(body) => to.serialize_other(body),
-            Crafted(body) => to.serialize_other(body),
-            Used(body) => to.serialize_other(body),
-            Broken(body) => to.serialize_other(body),
-            PickedUp(body) => to.serialize_other(body),
-            Dropped(body) => to.serialize_other(body),
-            Killed(body) => to.serialize_other(body),
-            KilledBy(body) => to.serialize_other(body),
-            Custom(body) => to.serialize_other(body),
-        }
-    }
-}
-
-impl Deserialize for StatisticCategory {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: category_id, data } = VarInt::mc_deserialize(data)?;
-        use StatisticCategory::*;
-        match category_id.0 {
-            0x00 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Mined(body))),
-            0x01 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Crafted(body))),
-            0x02 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Used(body))),
-            0x03 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Broken(body))),
-            0x04 => Ok(VarInt::mc_deserialize(data)?.map(move |body| PickedUp(body))),
-            0x05 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Dropped(body))),
-            0x06 => Ok(VarInt::mc_deserialize(data)?.map(move |body| Killed(body))),
-            0x07 => Ok(VarInt::mc_deserialize(data)?.map(move |body| KilledBy(body))),
-            0x08 => Ok(StatisticKind::mc_deserialize(data)?.map(move |body| Custom(body))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!("unknown Statistic Category ID {:?}", other)))
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for StatisticCategory {
-    fn test_gen_random() -> Self {
-        let idx = rand::random::<usize>() % 9;
-
-        use StatisticCategory::*;
-        match idx {
-            0 => Mined(VarInt::test_gen_random()),
-            1 => Crafted(VarInt::test_gen_random()),
-            2 => Used(VarInt::test_gen_random()),
-            3 => Broken(VarInt::test_gen_random()),
-            4 => PickedUp(VarInt::test_gen_random()),
-            5 => Dropped(VarInt::test_gen_random()),
-            6 => Killed(VarInt::test_gen_random()),
-            7 => KilledBy(VarInt::test_gen_random()),
-            8 => Custom(StatisticKind::test_gen_random()),
-            other => panic!("impossible condition {}", other)
-        }
-    }
-}
+proto_varint_enum!(StatisticCategory,
+    0x00 :: Mined(VarInt),
+    0x01 :: Crafted(VarInt),
+    0x02 :: Used(VarInt),
+    0x03 :: Broken(VarInt),
+    0x04 :: PickedUp(VarInt),
+    0x05 :: Dropped(VarInt),
+    0x06 :: Killed(VarInt),
+    0x07 :: KilledBy(VarInt),
+    0x08 :: Custom(StatisticKind)
+);
 
 proto_varint_enum!(StatisticKind,
     0x00 :: LeaveGame,
@@ -1147,76 +1076,14 @@ __protocol_body_def_helper!(MultiBlockChangeRecord {
     block_id: VarInt
 });
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum BossBarAction {
-    Add(BossBarAddSpec),
-    Remove,
-    UpdateHealth(BossBarUpdateHealthSpec),
-    UpdateTitle(BossBarUpdateTitleSpec),
-    UpdateStyle(BossBarUpdateStyleSpec),
-    UpdateFlags(BossBarUpdateFlagsSpec),
-}
-
-impl Serialize for BossBarAction {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use BossBarAction::*;
-        to.serialize_other(&VarInt(match self {
-            Add(_) => 0x00,
-            Remove => 0x01,
-            UpdateHealth(_) => 0x02,
-            UpdateTitle(_) => 0x03,
-            UpdateStyle(_) => 0x04,
-            UpdateFlags(_) => 0x05,
-        }))?;
-        match self {
-            Add(body) => to.serialize_other(body),
-            Remove => Ok(()),
-            UpdateHealth(body) => to.serialize_other(body),
-            UpdateTitle(body) => to.serialize_other(body),
-            UpdateStyle(body) => to.serialize_other(body),
-            UpdateFlags(body) => to.serialize_other(body),
-        }
-    }
-}
-
-impl Deserialize for BossBarAction {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: type_id,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        use BossBarAction::*;
-        match type_id.0 {
-            0x00 => Ok(BossBarAddSpec::mc_deserialize(data)?.map(move |body| Add(body))),
-            0x01 => Deserialized::ok(Remove, data),
-            0x02 => {
-                Ok(BossBarUpdateHealthSpec::mc_deserialize(data)?
-                    .map(move |body| UpdateHealth(body)))
-            }
-            0x03 => Ok(
-                BossBarUpdateTitleSpec::mc_deserialize(data)?.map(move |body| UpdateTitle(body))
-            ),
-            0x04 => Ok(
-                BossBarUpdateStyleSpec::mc_deserialize(data)?.map(move |body| UpdateStyle(body))
-            ),
-            0x05 => Ok(
-                BossBarUpdateFlagsSpec::mc_deserialize(data)?.map(move |body| UpdateFlags(body))
-            ),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid boss bar action id {:x}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for BossBarAction {
-    fn test_gen_random() -> Self {
-        // todo
-        BossBarAction::Remove
-    }
-}
+proto_varint_enum!(BossBarAction,
+    0x00 :: Add(BossBarAddSpec),
+    0x01 :: Remove,
+    0x02 :: UpdateHealth(BossBarUpdateHealthSpec),
+    0x03 :: UpdateTitle(BossBarUpdateTitleSpec),
+    0x04 :: UpdateStyle(BossBarUpdateStyleSpec),
+    0x05 :: UpdateFlags(BossBarUpdateFlagsSpec)
+);
 
 proto_varint_enum!(BossBarColor,
     0x00 :: Pink,
@@ -1333,7 +1200,6 @@ impl Deserialize for CommandNodeSpec {
         } else {
             (None, data)
         };
-
         let is_executable = flags & 0x04 != 0;
 
         use CommandNode::*;
@@ -1380,7 +1246,7 @@ impl TestRandom for CommandNodeSpec {
 pub struct CommandArgumentNodeSpec {
     pub name: String,
     pub parser: CommandParserSpec,
-    pub suggestions_types: Option<SuggestionsTypeSpec>
+    pub suggestions_types: Option<SuggestionsTypeSpec>,
 }
 
 impl CommandArgumentNodeSpec {
@@ -1407,7 +1273,7 @@ impl CommandArgumentNodeSpec {
         Deserialized::ok(Self {
             name,
             parser,
-            suggestions_types
+            suggestions_types,
         }, data)
     }
 }
@@ -1438,240 +1304,56 @@ __protocol_body_def_helper!(CommandLiteralNodeSpec {
     name: String
 });
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum CommandParserSpec {
-    Bool,
-    Double(DoubleParserProps),
-    Float(FloatParserProps),
-    Integer(IntegerParserProps),
-    StringParser(StringParserMode),
-    Entity(EntityParserFlags),
-    GameProfile,
-    BlockPosition,
-    ColumnPosition,
-    Vec3,
-    Vec2,
-    BlockState,
-    BlockPredicate,
-    ItemStack,
-    ItemPredicate,
-    Color,
-    Component,
-    Message,
-    Nbt,
-    NbtPath,
-    Objective,
-    ObjectiveCriteria,
-    Operation,
-    Particle,
-    Rotation,
-    ScoreboardSlot,
-    ScoreHolder(ScoreHolderFlags),
-    Swizzle,
-    Team,
-    ItemSlot,
-    ResourceLocation,
-    MobEffect,
-    Function,
-    EntityAnchor,
-    Range(RangeParserProps),
-    IntRange,
-    FloatRange,
-    ItemEnchantment,
-    EntitySummon,
-    Dimension,
-    UUID,
-    NbtTag,
-    NbtCompoundTag,
-    Time
-}
-
-impl Serialize for CommandParserSpec {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use CommandParserSpec::*;
-
-        let name = self.name().to_owned();
-        to.serialize_other(&name)?;
-
-        match self {
-            Double(body) => to.serialize_other(body),
-            Float(body) => to.serialize_other(body),
-            Integer(body) => to.serialize_other(body),
-            StringParser(body) => to.serialize_other(body),
-            Entity(body) => to.serialize_other(body),
-            ScoreHolder(body) => to.serialize_other(body),
-            Range(body) => to.serialize_other(body),
-            _ => Ok(())
-        }
-    }
-}
-
-impl Deserialize for CommandParserSpec {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized{ value: identifier, data} = String::mc_deserialize(data)?;
-
-        use CommandParserSpec::*;
-
-        match identifier.as_str() {
-            "brigadier:bool" => Deserialized::ok(Bool, data),
-            "brigadier:double" => Ok(DoubleParserProps::mc_deserialize(data)?.map(move |body| Double(body))),
-            "brigadier:float" => Ok(FloatParserProps::mc_deserialize(data)?.map(move |body| Float(body))),
-            "brigadier:integer" => Ok(IntegerParserProps::mc_deserialize(data)?.map(move |body| Integer(body))),
-            "brigadier:string" => Ok(StringParserMode::mc_deserialize(data)?.map(move |body| StringParser(body))),
-            "minecraft:entity" => Ok(EntityParserFlags::mc_deserialize(data)?.map(move |body| Entity(body))),
-            "minecraft:game_profile" => Deserialized::ok(GameProfile, data),
-            "minecraft:block_pos" => Deserialized::ok(BlockPosition, data),
-            "minecraft:column_pos" => Deserialized::ok(ColumnPosition, data),
-            "minecraft:vec3" => Deserialized::ok(Vec3, data),
-            "minecraft:vec2" => Deserialized::ok(Vec2, data),
-            "minecraft:block_state" => Deserialized::ok(BlockState, data),
-            "minecraft:block_predicate" => Deserialized::ok(BlockPredicate, data),
-            "minecraft:item_stack" => Deserialized::ok(ItemStack, data),
-            "minecraft:item_predicate" => Deserialized::ok(ItemPredicate, data),
-            "minecraft:color" => Deserialized::ok(Color, data),
-            "minecraft:component" => Deserialized::ok(Component, data),
-            "minecraft:message" => Deserialized::ok(Message, data),
-            "minecraft:nbt" => Deserialized::ok(Nbt, data),
-            "minecraft:nbt_path" => Deserialized::ok(NbtPath, data),
-            "minecraft:objective" => Deserialized::ok(Objective, data),
-            "minecraft:objective_criteria" => Deserialized::ok(ObjectiveCriteria, data),
-            "minecraft:operation" => Deserialized::ok(Operation, data),
-            "minecraft:particle" => Deserialized::ok(Particle, data),
-            "minecraft:rotation" => Deserialized::ok(Rotation, data),
-            "minecraft:scoreboard_slot" => Deserialized::ok(ScoreboardSlot, data),
-            "minecraft:score_holder" => Ok(ScoreHolderFlags::mc_deserialize(data)?.map(move |body| ScoreHolder(body))),
-            "minecraft:swizzle" => Deserialized::ok(Swizzle, data),
-            "minecraft:team" => Deserialized::ok(Team, data),
-            "minecraft:item_slot" => Deserialized::ok(ItemSlot, data),
-            "minecraft:resource_location" => Deserialized::ok(ResourceLocation, data),
-            "minecraft:mob_effect" => Deserialized::ok(MobEffect, data),
-            "minecraft:function" => Deserialized::ok(Function, data),
-            "minecraft:entity_anchor" => Deserialized::ok(EntityAnchor, data),
-            "minecraft:range" => Ok(RangeParserProps::mc_deserialize(data)?.map(move |body| Range(body))),
-            "minecraft:int_range" => Deserialized::ok(IntRange, data),
-            "minecraft:float_range" => Deserialized::ok(FloatRange, data),
-            "minecraft:item_enchantment" => Deserialized::ok(ItemEnchantment, data),
-            "minecraft:entity_summon" => Deserialized::ok(EntitySummon, data),
-            "minecraft:dimension" => Deserialized::ok(Dimension, data),
-            "minecraft:uuid" => Deserialized::ok(UUID, data),
-            "minecraft:nbt_tag" => Deserialized::ok(NbtTag, data),
-            "minecraft:nbt_compound_tag" => Deserialized::ok(NbtCompoundTag, data),
-            "minecraft:time" => Deserialized::ok(Time, data),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!("unknown command argument parser id {}", other)))
-        }
-    }
-}
-
-impl CommandParserSpec {
-    pub fn name(&self) -> &str {
-        use CommandParserSpec::*;
-
-        match self {
-            Bool => "brigadier:bool",
-            Double(_) => "brigadier:double",
-            Float(_) => "brigadier:float",
-            Integer(_) => "brigadier:integer",
-            StringParser(_) => "brigadier:string",
-            Entity(_) => "minecraft:entity",
-            GameProfile => "minecraft:game_profile",
-            BlockPosition => "minecraft:block_pos",
-            ColumnPosition => "minecraft:column_pos",
-            Vec3 => "minecraft:vec3",
-            Vec2 => "minecraft:vec2",
-            BlockState => "minecraft:block_state",
-            BlockPredicate => "minecraft:block_predicate",
-            ItemStack => "minecraft:item_stack",
-            ItemPredicate => "minecraft:item_predicate",
-            Color => "minecraft:color",
-            Component => "minecraft:component",
-            Message => "minecraft:message",
-            Nbt => "minecraft:nbt",
-            NbtPath => "minecraft:nbt_path",
-            Objective => "minecraft:objective",
-            ObjectiveCriteria => "minecraft:objective_criteria",
-            Operation => "minecraft:operation",
-            Particle => "minecraft:particle",
-            Rotation => "minecraft:rotation",
-            ScoreboardSlot => "minecraft:scoreboard_slot",
-            ScoreHolder(_) => "minecraft:score_holder",
-            Swizzle => "minecraft:swizzle",
-            Team => "minecraft:team",
-            ItemSlot => "minecraft:item_slot",
-            ResourceLocation => "minecraft:resource_location",
-            MobEffect => "minecraft:mob_effect",
-            Function => "minecraft:function",
-            EntityAnchor => "minecraft:entity_anchor",
-            Range(_) => "minecraft:range",
-            IntRange => "minecraft:int_range",
-            FloatRange => "minecraft:float_range",
-            ItemEnchantment => "minecraft:item_enchantment",
-            EntitySummon => "minecraft:entity_summon",
-            Dimension => "minecraft:dimension",
-            UUID => "minecraft:uuid",
-            NbtTag => "minecraft:nbt_tag",
-            NbtCompoundTag => "minecraft:nbt_compound_tag",
-            Time => "minecraft:time",
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for CommandParserSpec {
-    fn test_gen_random() -> Self {
-        use CommandParserSpec::*;
-
-        match rand::random::<usize>() % 43 {
-            0 => Bool,
-            1 => Double(DoubleParserProps::test_gen_random()),
-            2 => Float(FloatParserProps::test_gen_random()),
-            3 => Integer(IntegerParserProps::test_gen_random()),
-            4 => StringParser(StringParserMode::test_gen_random()),
-            5 => Entity(EntityParserFlags::test_gen_random()),
-            6 => GameProfile,
-            7 => BlockPosition,
-            8 => ColumnPosition,
-            9 => Vec2,
-            10 => Vec3,
-            11 => BlockState,
-            12 => ItemStack,
-            13 => ItemPredicate,
-            14 => Color,
-            15 => Component,
-            16 => Message,
-            17 => Nbt,
-            18 => NbtPath,
-            19 => Objective,
-            20 => ObjectiveCriteria,
-            21 => Operation,
-            22 => Particle,
-            23 => Rotation,
-            24 => ScoreboardSlot,
-            25 => ScoreHolder(ScoreHolderFlags::test_gen_random()),
-            26 => Swizzle,
-            27 => Team,
-            28 => ItemSlot,
-            29 => ResourceLocation,
-            30 => MobEffect,
-            31 => Function,
-            32 => EntityAnchor,
-            33 => Range(RangeParserProps::test_gen_random()),
-            34 => IntRange,
-            35 => FloatRange,
-            36 => ItemEnchantment,
-            37 => EntitySummon,
-            38 => Dimension,
-            39 => UUID,
-            40 => NbtTag,
-            41 => NbtCompoundTag,
-            42 => Time,
-            other => panic!("impossible condition (modulo) {}", other),
-        }
-    }
-}
+proto_str_enum!(CommandParserSpec,
+    "brigadier:bool" :: Bool,
+    "brigadier:double" :: Double(DoubleParserProps),
+    "brigadier:float" :: Float(FloatParserProps),
+    "brigadier:integer" :: Integer(IntegerParserProps),
+    "brigadier:string" :: StringParser(StringParserMode),
+    "minecraft:entity" :: Entity(EntityParserFlags),
+    "minecraft:game_profile" :: GameProfile,
+    "minecraft:block_pos" :: BlockPosition,
+    "minecraft:column_pos" :: ColumnPosition,
+    "minecraft:vec3" :: Vec3,
+    "minecraft:vec2" :: Vec2,
+    "minecraft:block_state" :: BlockState,
+    "minecraft:block_predicate" :: BlockPredicate,
+    "minecraft:item_stack" :: ItemStack,
+    "minecraft:item_predicate" :: ItemPredicate,
+    "minecraft:color" :: Color,
+    "minecraft:component" :: Component,
+    "minecraft:message" :: Message,
+    "minecraft:nbt" :: Nbt,
+    "minecraft:nbt_path" :: NbtPath,
+    "minecraft:objective" :: Objective,
+    "minecraft:objective_criteria" :: ObjectiveCriteria,
+    "minecraft:operation" :: Operation,
+    "minecraft:particle" :: Particle,
+    "minecraft:rotation" :: Rotation,
+    "minecraft:scoreboard_slot" :: ScoreboardSlot,
+    "minecraft:score_holder" :: ScoreHolder(ScoreHolderFlags),
+    "minecraft:swizzle" :: Swizzle,
+    "minecraft:team" :: Team,
+    "minecraft:item_slot" :: ItemSlot,
+    "minecraft:resource_location" :: ResourceLocation,
+    "minecraft:mob_effect" :: MobEffect,
+    "minecraft:function" :: Function,
+    "minecraft:entity_anchor" :: EntityAnchor,
+    "minecraft:range" :: Range(RangeParserProps),
+    "minecraft:int_range" :: IntRange,
+    "minecraft:float_range" :: FloatRange,
+    "minecraft:item_enchantment" :: ItemEnchantment,
+    "minecraft:entity_summon" :: EntitySummon,
+    "minecraft:dimension" :: Dimension,
+    "minecraft:uuid" :: UUID,
+    "minecraft:nbt_tag" :: NbtTag,
+    "minecraft:nbt_compound_tag" :: NbtCompoundTag,
+    "minecraft:time" :: Time
+);
 
 pub struct NumParserProps<T> {
     pub min: Option<T>,
-    pub max: Option<T>
+    pub max: Option<T>,
 }
 
 pub type DoubleParserProps = NumParserProps<f64>;
@@ -1755,7 +1437,7 @@ impl<T> Deserialize for NumParserProps<T> where T: Deserialize {
 #[cfg(test)]
 impl<T> TestRandom for NumParserProps<T> where
     T: TestRandom + std::cmp::PartialOrd,
-    rand::distributions::Standard : rand::distributions::Distribution<T>,
+    rand::distributions::Standard: rand::distributions::Distribution<T>,
 {
     fn test_gen_random() -> Self {
         let has_min = rand::random::<bool>();
@@ -1781,7 +1463,7 @@ impl<T> TestRandom for NumParserProps<T> where
 
         Self {
             min,
-            max
+            max,
         }
     }
 }
@@ -1805,81 +1487,13 @@ __protocol_body_def_helper!(RangeParserProps {
     decimal: bool
 });
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum TeamAction {
-    Create(TeamActionCreateSpec),
-    Remove,
-    UpdateInfo(TeamActionUpdateInfoSpec),
-    AddPlayers(TeamActionPlayerList),
-    RemovePlayers(TeamActionPlayerList),
-}
-
-impl Serialize for TeamAction {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use TeamAction::*;
-
-        to.serialize_byte(match self {
-            Create(_) => 0x00,
-            Remove => 0x01,
-            UpdateInfo(_) => 0x02,
-            AddPlayers(_) => 0x03,
-            RemovePlayers(_) => 0x04,
-        })?;
-
-        match self {
-            Create(body) => to.serialize_other(body),
-            UpdateInfo(body) => to.serialize_other(body),
-            AddPlayers(body) => to.serialize_other(body),
-            RemovePlayers(body) => to.serialize_other(body),
-            _ => Ok(()),
-        }
-    }
-}
-
-impl Deserialize for TeamAction {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: id, data } = u8::mc_deserialize(data)?;
-
-        use TeamAction::*;
-
-        match id {
-            0x00 => Ok(TeamActionCreateSpec::mc_deserialize(data)?.map(move |body| Create(body))),
-            0x01 => Deserialized::ok(Remove, data),
-            0x02 => {
-                Ok(TeamActionUpdateInfoSpec::mc_deserialize(data)?
-                    .map(move |body| UpdateInfo(body)))
-            }
-            0x03 => {
-                Ok(TeamActionPlayerList::mc_deserialize(data)?.map(move |body| AddPlayers(body)))
-            }
-            0x04 => Ok(
-                TeamActionPlayerList::mc_deserialize(data)?.map(move |body| RemovePlayers(body))
-            ),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid team action id {}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for TeamAction {
-    fn test_gen_random() -> Self {
-        let rand_idx = rand::random::<usize>() % 5;
-
-        use TeamAction::*;
-
-        match rand_idx {
-            0 => Create(TeamActionCreateSpec::test_gen_random()),
-            1 => Remove,
-            2 => UpdateInfo(TeamActionUpdateInfoSpec::test_gen_random()),
-            3 => AddPlayers(TeamActionPlayerList::test_gen_random()),
-            4 => RemovePlayers(TeamActionPlayerList::test_gen_random()),
-            impossible => panic!("impossible condition because modulus {}", impossible),
-        }
-    }
-}
+proto_byte_enum!(TeamAction,
+    0x00 :: Create(TeamActionCreateSpec),
+    0x01 :: Remove,
+    0x02 :: UpdateInfo(TeamActionUpdateInfoSpec),
+    0x03 :: AddPlayers(TeamActionPlayerList),
+    0x04 :: RemovePlayers(TeamActionPlayerList)
+);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TeamMember {
@@ -1969,11 +1583,10 @@ proto_byte_flag!(TeamFriendlyFlags,
     0x02 :: show_invisible_teammates
 );
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum UpdateScoreAction {
-    Upsert(VarInt),
-    Remove,
-}
+proto_byte_enum!(UpdateScoreAction,
+    0x00 :: Upsert(VarInt),
+    0x01 :: Remove
+);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateScoreSpec {
@@ -1983,15 +1596,9 @@ pub struct UpdateScoreSpec {
 
 impl Serialize for UpdateScoreSpec {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use UpdateScoreAction::*;
-        to.serialize_byte(match self.action {
-            Upsert(_) => 0x0,
-            Remove => 0x01,
-        })?;
+        to.serialize_byte(self.action.id())?;
         to.serialize_other(&self.objective_name)?;
-        if let Upsert(value) = &self.action {
-            to.serialize_other(value)?;
-        }
+        self.action.serialize_body(to)?;
 
         Ok(())
     }
@@ -1999,134 +1606,36 @@ impl Serialize for UpdateScoreSpec {
 
 impl Deserialize for UpdateScoreSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: action_id,
-            data,
-        } = u8::mc_deserialize(data)?;
-        let Deserialized {
-            value: objective_name,
-            data,
-        } = String::mc_deserialize(data)?;
+        let Deserialized { value: action_id, data } = u8::mc_deserialize(data)?;
+        let Deserialized { value: objective_name, data } = String::mc_deserialize(data)?;
 
-        use UpdateScoreAction::*;
-        let Deserialized {
-            value: action,
-            data,
-        } = match action_id {
-            0x00 => Ok(VarInt::mc_deserialize(data)?.map(move |value| Upsert(value))),
-            0x01 => Deserialized::ok(Remove, data),
-            other => DeserializeErr::CannotUnderstandValue(format!(
-                "invalid update score action {}",
-                other
-            ))
-                .into(),
-        }?;
-
-        Deserialized::ok(
+        Ok(UpdateScoreAction::deserialize_with_id(action_id, data)?.map(move |action| {
             Self {
                 objective_name,
                 action,
-            },
-            data,
-        )
+            }
+        }))
     }
 }
 
 #[cfg(test)]
 impl TestRandom for UpdateScoreSpec {
     fn test_gen_random() -> Self {
-        use UpdateScoreAction::*;
-
-        let rand_bool = rand::random::<bool>();
-        let action = if rand_bool {
-            Upsert(VarInt::test_gen_random())
-        } else {
-            Remove
-        };
-
         Self {
             objective_name: String::test_gen_random(),
-            action,
+            action: UpdateScoreAction::test_gen_random(),
         }
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum TitleActionSpec {
-    SetTitle(Chat),
-    SetSubtitle(Chat),
-    SetActionBar(Chat),
-    SetTimesAndDisplay(TitleTimesSpec),
-    Hide,
-    Reset,
-}
-
-impl Serialize for TitleActionSpec {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use TitleActionSpec::*;
-
-        VarInt(match self {
-            SetTitle(_) => 0x00,
-            SetSubtitle(_) => 0x01,
-            SetActionBar(_) => 0x02,
-            SetTimesAndDisplay(_) => 0x03,
-            Hide => 0x04,
-            Reset => 0x05,
-        })
-            .mc_serialize(to)?;
-
-        match self {
-            SetTitle(body) => to.serialize_other(body),
-            SetSubtitle(body) => to.serialize_other(body),
-            SetActionBar(body) => to.serialize_other(body),
-            SetTimesAndDisplay(body) => to.serialize_other(body),
-            _ => Ok(()),
-        }
-    }
-}
-
-impl Deserialize for TitleActionSpec {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: action_id,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-
-        use TitleActionSpec::*;
-
-        match action_id.0 {
-            0x00 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetTitle(body))),
-            0x01 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetSubtitle(body))),
-            0x02 => Ok(Chat::mc_deserialize(data)?.map(move |body| SetActionBar(body))),
-            0x03 => {
-                Ok(TitleTimesSpec::mc_deserialize(data)?.map(move |body| SetTimesAndDisplay(body)))
-            }
-            0x04 => Deserialized::ok(Hide, data),
-            0x05 => Deserialized::ok(Reset, data),
-            other => {
-                DeserializeErr::CannotUnderstandValue(format!("invalid title action id {}", other))
-                    .into()
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for TitleActionSpec {
-    fn test_gen_random() -> Self {
-        let action_id = rand::random::<usize>() % 6;
-        use TitleActionSpec::*;
-        match action_id {
-            0 => SetTitle(Chat::test_gen_random()),
-            1 => SetSubtitle(Chat::test_gen_random()),
-            2 => SetActionBar(Chat::test_gen_random()),
-            3 => SetTimesAndDisplay(TitleTimesSpec::test_gen_random()),
-            4 => Hide,
-            5 => Reset,
-            _ => panic!("impossible condition, modulo 6"),
-        }
-    }
-}
+proto_varint_enum!(TitleActionSpec,
+    0x00 :: SetTitle(Chat),
+    0x01 :: SetSubtitle(Chat),
+    0x02 :: SetActionBar(Chat),
+    0x03 :: SetTimesAndDisplay(TitleTimesSpec),
+    0x04 :: Hide,
+    0x05 :: Reset
+);
 
 __protocol_body_def_helper!(TitleTimesSpec {
     fade_in: i32,
@@ -2150,7 +1659,7 @@ proto_varint_enum!(SoundCategory,
 #[derive(Clone, Debug, PartialEq)]
 pub struct StopSoundSpec {
     pub source: Option<SoundCategory>,
-    pub sound: Option<String>
+    pub sound: Option<String>,
 }
 
 impl Serialize for StopSoundSpec {
@@ -2201,7 +1710,7 @@ impl Deserialize for StopSoundSpec {
 
         Deserialized::ok(Self {
             source,
-            sound
+            sound,
         }, data)
     }
 }
@@ -2300,12 +1809,12 @@ impl Serialize for GameChangeReason {
         })?;
 
         let value = match self {
-            ChangeGameMode(body) => body.as_byte() as f32,
-            WinGame(body) => body.as_byte() as f32,
-            Demo(body) => body.as_byte() as f32,
+            ChangeGameMode(body) => body.id() as f32,
+            WinGame(body) => body.id() as f32,
+            Demo(body) => body.id() as f32,
             RainLevelChange(body) => *body,
             ThunderLevelChange(body) => *body,
-            Respawn(body) => body.as_byte() as f32,
+            Respawn(body) => body.id() as f32,
             _ => 0 as f32,
         };
         to.serialize_other(&value)
@@ -2320,62 +1829,24 @@ impl Deserialize for GameChangeReason {
         } = u8::mc_deserialize(data)?;
         let Deserialized { value, data } = f32::mc_deserialize(data)?;
         use GameChangeReason::*;
-        let out = match reason_id {
-            0x00 => Ok(NoRespawnAvailable),
-            0x01 => Ok(EndRaining),
-            0x02 => Ok(BeginRaining),
-            0x03 => Ok(ChangeGameMode(
-                GameMode::from_byte(value as u8)
-                    .map(move |v| Ok(v))
-                    .unwrap_or_else(|| {
-                        Err(DeserializeErr::CannotUnderstandValue(format!(
-                            "unknown gamemode value {}",
-                            value
-                        )))
-                    })?,
-            )),
-            0x04 => Ok(WinGame(
-                WinGameAction::from_byte(value as u8)
-                    .map(move |v| Ok(v))
-                    .unwrap_or_else(|| {
-                        Err(DeserializeErr::CannotUnderstandValue(format!(
-                            "unknown WinGame value {}",
-                            value
-                        )))
-                    })?,
-            )),
-            0x05 => Ok(Demo(
-                DemoEvent::from_byte(value as u8)
-                    .map(move |v| Ok(v))
-                    .unwrap_or_else(|| {
-                        Err(DeserializeErr::CannotUnderstandValue(format!(
-                            "unknown DemoEvent value {}",
-                            value
-                        )))
-                    })?,
-            )),
-            0x06 => Ok(ArrowHitPlayer),
-            0x07 => Ok(RainLevelChange(value)),
-            0x08 => Ok(ThunderLevelChange(value)),
-            0x09 => Ok(PufferfishSting),
-            0x0A => Ok(ElderGuardianMobAppearance),
-            0x0B => Ok(Respawn(
-                RespawnRequestType::from_byte(value as u8)
-                    .map(move |v| Ok(v))
-                    .unwrap_or_else(|| {
-                        Err(DeserializeErr::CannotUnderstandValue(format!(
-                            "invalid respawn reason {}",
-                            value
-                        )))
-                    })?,
-            )),
+        match reason_id {
+            0x00 => Deserialized::ok(NoRespawnAvailable, data),
+            0x01 => Deserialized::ok(EndRaining, data),
+            0x02 => Deserialized::ok(BeginRaining, data),
+            0x03 => Ok(GameMode::deserialize_with_id(value as u8, data)?.map(move |mode| ChangeGameMode(mode))),
+            0x04 => Ok(WinGameAction::deserialize_with_id(value as u8, data)?.map(move |mode| WinGame(mode))),
+            0x05 => Ok(DemoEvent::deserialize_with_id(value as u8, data)?.map(move |mode| Demo(mode))),
+            0x06 => Deserialized::ok(ArrowHitPlayer, data),
+            0x07 => Deserialized::ok(RainLevelChange(value), data),
+            0x08 => Deserialized::ok(ThunderLevelChange(value), data),
+            0x09 => Deserialized::ok(PufferfishSting, data),
+            0x0A => Deserialized::ok(ElderGuardianMobAppearance, data),
+            0x0B => Ok(RespawnRequestType::deserialize_with_id(value as u8, data)?.map(move |mode| Respawn(mode))),
             other => Err(DeserializeErr::CannotUnderstandValue(format!(
                 "invalid game change reason id {}",
                 other
             ))),
-        }?;
-
-        Deserialized::ok(out, data)
+        }
     }
 }
 
@@ -2450,10 +1921,7 @@ impl Serialize for MapColumns {
 
 impl Deserialize for MapColumns {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: columns,
-            data: rest,
-        } = u8::mc_deserialize(data)?;
+        let Deserialized { value: columns, data: rest } = u8::mc_deserialize(data)?;
         use MapColumns::*;
         match columns {
             0x00 => Deserialized::ok(NoUpdates, rest),
@@ -2540,12 +2008,11 @@ proto_byte_flag!(PlayerAbilityFlags,
     0x08 :: instant_break
 );
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum CombatEvent {
-    Enter,
-    End(CombatEndSpec),
-    EntityDead(CombatEntityDeadSpec),
-}
+proto_varint_enum!(CombatEvent,
+    0x00 :: Enter,
+    0x01 :: End(CombatEndSpec),
+    0x02 :: EntityDead(CombatEntityDeadSpec)
+);
 
 __protocol_body_def_helper!(CombatEndSpec {
     duration_ticks: VarInt,
@@ -2557,54 +2024,6 @@ __protocol_body_def_helper!(CombatEntityDeadSpec {
     entity_id: i32,
     message: Chat
 });
-
-impl Serialize for CombatEvent {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use CombatEvent::*;
-        to.serialize_other(&VarInt(match self {
-            Enter => 0x00,
-            End(_) => 0x01,
-            EntityDead(_) => 0x02,
-        }))?;
-
-        match self {
-            End(body) => to.serialize_other(body)?,
-            EntityDead(body) => to.serialize_other(body)?,
-            _ => {}
-        }
-
-        Ok(())
-    }
-}
-
-impl Deserialize for CombatEvent {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: action_id,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-
-        use CombatEvent::*;
-        match action_id.0 {
-            0x00 => Deserialized::ok(Enter, data),
-            0x01 => Ok(CombatEndSpec::mc_deserialize(data)?.map(move |body| End(body))),
-            0x02 => {
-                Ok(CombatEntityDeadSpec::mc_deserialize(data)?.map(move |body| EntityDead(body)))
-            }
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid combat event id {:?}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for CombatEvent {
-    fn test_gen_random() -> Self {
-        CombatEvent::Enter // todo
-    }
-}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct PlayerInfoAction<A: Clone + PartialEq + Debug> {
@@ -2632,14 +2051,26 @@ impl<A> Deserialize for PlayerInfoAction<A>
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum PlayerInfoActionList {
-    Add(Vec<PlayerInfoAction<PlayerAddActionSpec>>),
-    UpdateGameMode(Vec<PlayerInfoAction<GameMode>>),
-    UpdateLatency(Vec<PlayerInfoAction<VarInt>>),
-    UpdateDisplayName(Vec<PlayerInfoAction<Option<Chat>>>),
-    Remove(Vec<UUID4>),
+#[cfg(test)]
+impl<A> TestRandom for PlayerInfoAction<A>
+    where
+        A: Clone + PartialEq + Debug + TestRandom
+{
+    fn test_gen_random() -> Self {
+        Self {
+            uuid: UUID4::test_gen_random(),
+            action: A::test_gen_random(),
+        }
+    }
 }
+
+proto_varint_enum!(PlayerInfoActionList,
+    0x00 :: Add(VarIntCountedArray<PlayerInfoAction<PlayerAddActionSpec>>),
+    0x01 :: UpdateGameMode(VarIntCountedArray<PlayerInfoAction<GameMode>>),
+    0x02 :: UpdateLatency(VarIntCountedArray<PlayerInfoAction<VarInt>>),
+    0x03 :: UpdateDisplayName(VarIntCountedArray<PlayerInfoAction<Option<Chat>>>),
+    0x04 :: Remove(VarIntCountedArray<UUID4>)
+);
 
 __protocol_body_def_helper!(PlayerAddActionSpec {
     name: String,
@@ -2654,130 +2085,6 @@ __protocol_body_def_helper!(PlayerAddProperty {
     value: String,
     signature: Option<String>
 });
-
-impl PlayerInfoActionList {
-    pub fn player_ids(&self) -> Vec<UUID4> {
-        use PlayerInfoActionList::*;
-
-        match self {
-            Add(vec) => vec.iter().map(move |v| v.uuid).collect(),
-            UpdateGameMode(vec) => vec.iter().map(move |v| v.uuid).collect(),
-            UpdateLatency(vec) => vec.iter().map(move |v| v.uuid).collect(),
-            UpdateDisplayName(vec) => vec.iter().map(move |v| v.uuid).collect(),
-            Remove(vec) => vec.clone(),
-        }
-    }
-
-    pub fn id(&self) -> VarInt {
-        use PlayerInfoActionList::*;
-
-        match self {
-            Add(_) => 0x00,
-            UpdateGameMode(_) => 0x01,
-            UpdateLatency(_) => 0x02,
-            UpdateDisplayName(_) => 0x03,
-            Remove(_) => 0x04,
-        }
-            .into()
-    }
-
-    pub fn len(&self) -> usize {
-        use PlayerInfoActionList::*;
-
-        match self {
-            Add(vec) => vec.len(),
-            UpdateGameMode(vec) => vec.len(),
-            UpdateLatency(vec) => vec.len(),
-            UpdateDisplayName(vec) => vec.len(),
-            Remove(vec) => vec.len(),
-        }
-    }
-}
-
-impl Serialize for PlayerInfoActionList {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let id = self.id();
-        to.serialize_other(&id)?;
-
-        let len = VarInt(self.len() as i32);
-        to.serialize_other(&len)?;
-
-        use PlayerInfoActionList::*;
-
-        match self {
-            Add(body) => serialize_vec_directly(body, to),
-            UpdateGameMode(body) => serialize_vec_directly(body, to),
-            UpdateLatency(body) => serialize_vec_directly(body, to),
-            UpdateDisplayName(body) => serialize_vec_directly(body, to),
-            Remove(body) => serialize_vec_directly(body, to),
-        }
-    }
-}
-
-impl Deserialize for PlayerInfoActionList {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: action_id,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: raw_count,
-            mut data,
-        } = VarInt::mc_deserialize(data)?;
-
-        let count = raw_count.0 as usize;
-
-        use PlayerInfoActionList::*;
-        match action_id.0 {
-            0x00 => Ok(deserialize_vec_directly(count, &mut data)?.map(move |v| Add(v))),
-            0x01 => Ok(deserialize_vec_directly(count, &mut data)?.map(move |v| UpdateGameMode(v))),
-            0x02 => Ok(deserialize_vec_directly(count, &mut data)?.map(move |v| UpdateLatency(v))),
-            0x03 => {
-                Ok(deserialize_vec_directly(count, &mut data)?.map(move |v| UpdateDisplayName(v)))
-            }
-            0x04 => Ok(deserialize_vec_directly(count, &mut data)?.map(move |v| Remove(v))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid player info action id {}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for PlayerInfoActionList {
-    fn test_gen_random() -> Self {
-        PlayerInfoActionList::Remove(vec![UUID4::random()])
-    }
-}
-
-fn serialize_vec_directly<I: Serialize, S: Serializer>(
-    items: &Vec<I>,
-    to: &mut S,
-) -> SerializeResult {
-    for item in items {
-        to.serialize_other(item)?;
-    }
-
-    Ok(())
-}
-
-fn deserialize_vec_directly<I: Deserialize>(
-    count: usize,
-    mut data: &[u8],
-) -> DeserializeResult<Vec<I>> {
-    let mut out = Vec::with_capacity(count);
-    for _ in 0..count {
-        let Deserialized {
-            value: item,
-            data: rest,
-        } = I::mc_deserialize(data)?;
-        data = rest;
-        out.push(item);
-    }
-
-    Deserialized::ok(out, data)
-}
 
 proto_varint_enum!(FacePlayerKind,
     0x00 :: Feet,
@@ -2832,15 +2139,14 @@ proto_byte_enum!(EntityEffectKind,
     0x20 :: HeroOfTheVillage
 );
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum WorldBorderAction {
-    SetSize(WorldBorderSetSizeSpec),
-    LerpSize(WorldBorderLerpSizeSpec),
-    SetCenter(WorldBorderSetCenterSpec),
-    Initialize(WorldBorderInitiaializeSpec),
-    SetWarningTime(WorldBorderWarningTimeSpec),
-    SetWarningBlocks(WorldBorderWarningBlocksSpec),
-}
+proto_varint_enum!(WorldBorderAction,
+    0x00 :: SetSize(WorldBorderSetSizeSpec),
+    0x01 :: LerpSize(WorldBorderLerpSizeSpec),
+    0x02 :: SetCenter(WorldBorderSetCenterSpec),
+    0x03 :: Initialize(WorldBorderInitiaializeSpec),
+    0x04 :: SetWarningTime(WorldBorderWarningTimeSpec),
+    0x05 :: SetWarningBlocks(WorldBorderWarningBlocksSpec)
+);
 
 __protocol_body_def_helper!(WorldBorderSetSizeSpec { diameter: f64 });
 
@@ -2871,131 +2177,12 @@ __protocol_body_def_helper!(WorldBorderWarningBlocksSpec {
     warning_blocks: VarInt
 });
 
-impl WorldBorderAction {
-    pub fn id(&self) -> VarInt {
-        use WorldBorderAction::*;
-        match self {
-            SetSize(_) => 0x00,
-            LerpSize(_) => 0x01,
-            SetCenter(_) => 0x02,
-            Initialize(_) => 0x03,
-            SetWarningTime(_) => 0x04,
-            SetWarningBlocks(_) => 0x05,
-        }
-            .into()
-    }
-}
-
-impl Serialize for WorldBorderAction {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let id = self.id();
-        to.serialize_other(&id)?;
-
-        use WorldBorderAction::*;
-        match self {
-            SetSize(body) => to.serialize_other(body),
-            LerpSize(body) => to.serialize_other(body),
-            SetCenter(body) => to.serialize_other(body),
-            Initialize(body) => to.serialize_other(body),
-            SetWarningTime(body) => to.serialize_other(body),
-            SetWarningBlocks(body) => to.serialize_other(body),
-        }
-    }
-}
-
-impl Deserialize for WorldBorderAction {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: id, data } = VarInt::mc_deserialize(data)?;
-
-        use WorldBorderAction::*;
-        match id.0 {
-            0x00 => {
-                Ok(WorldBorderSetSizeSpec::mc_deserialize(data)?.map(move |body| SetSize(body)))
-            }
-            0x01 => {
-                Ok(WorldBorderLerpSizeSpec::mc_deserialize(data)?.map(move |body| LerpSize(body)))
-            }
-            0x02 => Ok(
-                WorldBorderSetCenterSpec::mc_deserialize(data)?.map(move |body| SetCenter(body))
-            ),
-            0x03 => Ok(WorldBorderInitiaializeSpec::mc_deserialize(data)?
-                .map(move |body| Initialize(body))),
-            0x04 => Ok(WorldBorderWarningTimeSpec::mc_deserialize(data)?
-                .map(move |body| SetWarningTime(body))),
-            0x05 => Ok(WorldBorderWarningBlocksSpec::mc_deserialize(data)?
-                .map(move |body| SetWarningBlocks(body))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid world border action id {}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for WorldBorderAction {
-    fn test_gen_random() -> Self {
-        WorldBorderAction::SetSize(WorldBorderSetSizeSpec {
-            diameter: f64::test_gen_random(),
-        })
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Eq)]
-pub enum ScoreboardPosition {
-    List,
-    Sidebar,
-    BelowName,
-    TeamSpecific(i8),
-}
-
-impl ScoreboardPosition {
-    pub fn id(&self) -> i8 {
-        use ScoreboardPosition::*;
-        match self {
-            List => 0x00,
-            Sidebar => 0x01,
-            BelowName => 0x02,
-            TeamSpecific(team_id) => 0x03 + team_id,
-        }
-    }
-}
-
-impl Serialize for ScoreboardPosition {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_byte(self.id() as u8)
-    }
-}
-
-impl Deserialize for ScoreboardPosition {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: id, data } = i8::mc_deserialize(data)?;
-        use ScoreboardPosition::*;
-        let res = match id {
-            0x00 => Ok(List),
-            0x01 => Ok(Sidebar),
-            0x02 => Ok(BelowName),
-            other => {
-                if other >= 3 && other <= 12 {
-                    Ok(TeamSpecific(other - 0x03))
-                } else {
-                    Err(DeserializeErr::CannotUnderstandValue(format!(
-                        "invalid scoreboard position id {}",
-                        id
-                    )))
-                }
-            }
-        }?;
-        Deserialized::ok(res, data)
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for ScoreboardPosition {
-    fn test_gen_random() -> Self {
-        ScoreboardPosition::Sidebar
-    }
-}
+proto_byte_enum!(ScoreboardPosition,
+    0x00 :: List,
+    0x01 :: Sidebar,
+    0x02 :: BelowName,
+    0x03 :: TeamSpecific(i8)
+);
 
 proto_varint_enum!(EquipmentSlot,
     0x00 :: MainHand,
@@ -3006,12 +2193,11 @@ proto_varint_enum!(EquipmentSlot,
     0x05 :: ArmorHelmet
 );
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum ScoreboardObjectiveAction {
-    Create(ScoreboardObjectiveSpec),
-    Remove,
-    UpdateText(ScoreboardObjectiveSpec),
-}
+proto_byte_enum!(ScoreboardObjectiveAction,
+    0x00 :: Create(ScoreboardObjectiveSpec),
+    0x01 :: Remove,
+    0x02 :: UpdateText(ScoreboardObjectiveSpec)
+);
 
 proto_varint_enum!(ScoreboardObjectiveKind,
     0x00 :: Integer,
@@ -3022,58 +2208,6 @@ __protocol_body_def_helper!(ScoreboardObjectiveSpec {
     text: Chat,
     kind: ScoreboardObjectiveKind
 });
-
-impl ScoreboardObjectiveAction {
-    pub fn id(&self) -> i8 {
-        use ScoreboardObjectiveAction::*;
-        match self {
-            Create(_) => 0x00,
-            Remove => 0x01,
-            UpdateText(_) => 0x02,
-        }
-    }
-}
-
-impl Serialize for ScoreboardObjectiveAction {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let id = self.id();
-        to.serialize_other(&id)?;
-
-        use ScoreboardObjectiveAction::*;
-        match self {
-            Create(body) => to.serialize_other(body),
-            UpdateText(body) => to.serialize_other(body),
-            _ => Ok(()),
-        }
-    }
-}
-
-impl Deserialize for ScoreboardObjectiveAction {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: id, data } = i8::mc_deserialize(data)?;
-        use ScoreboardObjectiveAction::*;
-        match id {
-            0x00 => {
-                Ok(ScoreboardObjectiveSpec::mc_deserialize(data)?.map(move |body| Create(body)))
-            }
-            0x01 => Deserialized::ok(Remove, data),
-            0x02 => Ok(
-                ScoreboardObjectiveSpec::mc_deserialize(data)?.map(move |body| UpdateText(body))
-            ),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid scoreboard objective action id {}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for ScoreboardObjectiveAction {
-    fn test_gen_random() -> Self {
-        ScoreboardObjectiveAction::Remove
-    }
-}
 
 __protocol_body_def_helper!(AdvancementMappingEntrySpec {
     key: String,
@@ -3101,7 +2235,7 @@ __protocol_body_def_helper!(AdvancementDisplaySpec {
 pub struct AdvancementDisplayFlags {
     pub background_texture: Option<String>,
     pub show_toast: bool,
-    pub hidden: bool
+    pub hidden: bool,
 }
 
 impl Serialize for AdvancementDisplayFlags {
@@ -3128,7 +2262,7 @@ impl Serialize for AdvancementDisplayFlags {
 
 impl Deserialize for AdvancementDisplayFlags {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized{ value: raw_flags, data } = i32::mc_deserialize(data)?;
+        let Deserialized { value: raw_flags, data } = i32::mc_deserialize(data)?;
         let has_background_texture = raw_flags & 0x01 != 0;
         let show_toast = raw_flags & 0x02 != 0;
         let hidden = raw_flags & 0x04 != 0;
@@ -3141,7 +2275,7 @@ impl Deserialize for AdvancementDisplayFlags {
             Self {
                 background_texture,
                 show_toast,
-                hidden
+                hidden,
             }
         }))
     }
@@ -3161,7 +2295,7 @@ impl TestRandom for AdvancementDisplayFlags {
         Self {
             background_texture,
             show_toast,
-            hidden
+            hidden,
         }
     }
 }
@@ -3262,62 +2396,11 @@ __protocol_body_def_helper!(InteractAtSpec {
     hand: Hand
 });
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum InteractKind {
-    Interact(Hand),
-    Attack,
-    InteractAt(InteractAtSpec),
-}
-
-impl InteractKind {
-    pub fn id(&self) -> VarInt {
-        use InteractKind::*;
-        match self {
-            Interact(_) => 0x00,
-            Attack => 0x01,
-            InteractAt(_) => 0x02,
-        }
-            .into()
-    }
-}
-
-impl Serialize for InteractKind {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let id = self.id();
-        to.serialize_other(&id)?;
-
-        use InteractKind::*;
-        match self {
-            InteractAt(body) => to.serialize_other(body),
-            Interact(hand) => to.serialize_other(hand),
-            _ => Ok(()),
-        }
-    }
-}
-
-impl Deserialize for InteractKind {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: id, data } = VarInt::mc_deserialize(data)?;
-
-        use InteractKind::*;
-        match id.0 {
-            0x00 => Ok(Hand::mc_deserialize(data)?.map(move |hand| Interact(hand))),
-            0x01 => Deserialized::ok(Attack, data),
-            0x02 => Ok(InteractAtSpec::mc_deserialize(data)?.map(move |body| InteractAt(body))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid entity interact kind id {}",
-                other
-            ))),
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for InteractKind {
-    fn test_gen_random() -> Self {
-        InteractKind::Interact(Hand::test_gen_random())
-    }
-}
+proto_varint_enum!(InteractKind,
+    0x00 :: Interact(Hand),
+    0x01 :: Attack,
+    0x02 :: InteractAt(InteractAtSpec)
+);
 
 proto_byte_flag!(ClientPlayerAbilities,
     0x01 :: creative,
@@ -3362,52 +2445,10 @@ proto_byte_flag!(SteerVehicleFlags,
     0x02 :: unmount
 );
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum RecipeBookStatus {
-    Displayed(String),
-    States(RecipeBookStates)
-}
-
-impl Serialize for RecipeBookStatus {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use RecipeBookStatus::*;
-        to.serialize_other(&VarInt(match self {
-            Displayed(_) => 0x00,
-            States(_) => 0x01
-        }))?;
-
-        match self {
-            Displayed(body) => to.serialize_other(body),
-            States(body) => to.serialize_other(body),
-        }
-    }
-}
-
-impl Deserialize for RecipeBookStatus {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: type_id, data } = VarInt::mc_deserialize(data)?;
-        use RecipeBookStatus::*;
-        match type_id.0 {
-            0x00 => Ok(String::mc_deserialize(data)?.map(move |identifier| Displayed(identifier))),
-            0x01 => Ok(RecipeBookStates::mc_deserialize(data)?.map(move |states| States(states))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!("invalid recipe book action type {}", other)))
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for RecipeBookStatus {
-    fn test_gen_random() -> Self {
-        use RecipeBookStatus::*;
-
-        let rand_bool = rand::random::<bool>();
-        if rand_bool {
-            Displayed(String::test_gen_random())
-        } else {
-            States(RecipeBookStates::test_gen_random())
-        }
-    }
-}
+proto_varint_enum!(RecipeBookStatus,
+    0x00 :: Displayed(String),
+    0x01 :: States(RecipeBookStates)
+);
 
 __protocol_body_def_helper!(RecipeBookStates {
     crafting_book_open: bool,
@@ -3427,53 +2468,10 @@ proto_varint_enum!(ResourcePackStatus,
     0x03 :: Accepted
 );
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum AdvancementTabAction {
-    Opened(String),
-    Closed
-}
-
-impl Serialize for AdvancementTabAction {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use AdvancementTabAction::*;
-
-        to.serialize_other(&VarInt(match self {
-            Opened(_) => 0x00,
-            Closed => 0x01
-        }))?;
-
-        match self {
-            Opened(identifier) => to.serialize_other(identifier),
-            _ => Ok(())
-        }
-    }
-}
-
-impl Deserialize for AdvancementTabAction {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        use AdvancementTabAction::*;
-
-        let Deserialized { value: action_id, data } = VarInt::mc_deserialize(data)?;
-        match action_id.0 {
-            0x00 => Ok(String::mc_deserialize(data)?.map(move |id| Opened(id))),
-            0x01 => Deserialized::ok(Closed, data),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!("bad advancement tab action id {}", other)))
-        }
-    }
-}
-
-#[cfg(test)]
-impl TestRandom for AdvancementTabAction {
-    fn test_gen_random() -> Self {
-        use AdvancementTabAction::*;
-
-        if rand::random::<bool>() {
-            Opened(String::test_gen_random())
-        } else {
-            Closed
-        }
-    }
-}
+proto_varint_enum!(AdvancementTabAction,
+    0x00 :: Opened(String),
+    0x01 :: Closed
+);
 
 proto_varint_enum!(CommandBlockMode,
     0x00 :: Sequence,
@@ -3526,74 +2524,29 @@ pub struct RecipeSpec {
     pub id: String,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum Recipe {
-    CraftingShapeless(RecipeCraftingShapelessSpec),
-    CraftingShaped(RecipeCraftingShapedSpec),
-    CraftingArmorDye,
-    CraftingBookCloning,
-    CraftingMapCloning,
-    CraftingMapExtending,
-    CraftingFireworkRocket,
-    CraftingFireworkStar,
-    CraftingFireworkStarFade,
-    CraftingRepairItem,
-    CraftingTippedArrow,
-    CraftingBannerDuplicate,
-    CraftingBannerAddPattern,
-    CraftingShieldDecoration,
-    CraftingShulkerBoxColoring,
-    CraftingSuspiciousStew,
-    Smelting(RecipeSmeltingSpec),
-    Blasting(RecipeSmeltingSpec),
-    Smoking(RecipeSmeltingSpec),
-    CampfireCooking(RecipeSmeltingSpec),
-    StoneCutting(RecipeStonecuttingSpec),
-}
-
-impl Recipe {
-    pub fn id(&self) -> String {
-        use Recipe::*;
-        match self {
-            CraftingShapeless(_) => "minecraft:crafting_shapeless",
-            CraftingShaped(_) => "minecraft:crafting_shaped",
-            CraftingArmorDye => "minecraft:crafting_special_armordye",
-            CraftingBookCloning => "minecraft:crafting_special_bookcloning",
-            CraftingMapCloning => "minecraft:crafting_special_mapcloning",
-            CraftingMapExtending => "minecraft:crafting_special_mapextending",
-            CraftingFireworkRocket => "minecraft:crafting_special_firework_rocket",
-            CraftingFireworkStar => "minecraft:crafting_special_firework_star",
-            CraftingFireworkStarFade => "minecraft:crafting_special_firework_star_fade",
-            CraftingRepairItem => "minecraft:crafting_special_repairitem",
-            CraftingTippedArrow => "minecraft:crafting_special_tippedarrow",
-            CraftingBannerDuplicate => "minecraft:crafting_special_bannerduplicate",
-            CraftingBannerAddPattern => "minecraft:crafting_special_banneraddpattern",
-            CraftingShieldDecoration => "minecraft:crafting_special_shielddecoration",
-            CraftingShulkerBoxColoring => "minecraft:crafting_special_shulkerboxcoloring",
-            CraftingSuspiciousStew => "minecraft:crafting_special_suspiciousstew",
-            Smelting(_) => "minecraft:smelting",
-            Blasting(_) => "minecraft:blasting",
-            Smoking(_) => "minecraft:smoking",
-            CampfireCooking(_) => "minecraft:campfire_cooking",
-            StoneCutting(_) => "minecraft:stonecutting",
-        }
-            .to_owned()
-    }
-
-    fn serialize_body<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        use Recipe::*;
-        match self {
-            CraftingShapeless(body) => to.serialize_other(body),
-            CraftingShaped(body) => to.serialize_other(body),
-            Smelting(body) => to.serialize_other(body),
-            Blasting(body) => to.serialize_other(body),
-            Smoking(body) => to.serialize_other(body),
-            CampfireCooking(body) => to.serialize_other(body),
-            StoneCutting(body) => to.serialize_other(body),
-            _ => Ok(()),
-        }
-    }
-}
+proto_str_enum!(Recipe,
+    "minecraft:crafting_shapeless" :: CraftingShapeless(RecipeCraftingShapelessSpec),
+    "minecraft:crafting_shaped" :: CraftingShaped(RecipeCraftingShapedSpec),
+    "minecraft:crafting_special_armordye" :: CraftingArmorDye,
+    "minecraft:crafting_special_bookcloning" :: CraftingBookCloning,
+    "minecraft:crafting_special_mapcloning" :: CraftingMapCloning,
+    "minecraft:crafting_special_mapextending" :: CraftingMapExtending,
+    "minecraft:crafting_special_firework_rocket" :: CraftingFireworkRocket,
+    "minecraft:crafting_special_firework_star" :: CraftingFireworkStar,
+    "minecraft:crafting_special_firework_star_fade" :: CraftingFireworkStarFade,
+    "minecraft:crafting_special_repairitem" :: CraftingRepairItem,
+    "minecraft:crafting_special_tippedarrow" :: CraftingTippedArrow,
+    "minecraft:crafting_special_bannerduplicate" :: CraftingBannerDuplicate,
+    "minecraft:crafting_special_banneraddpattern" :: CraftingBannerAddPattern,
+    "minecraft:crafting_special_shielddecoration" :: CraftingShieldDecoration,
+    "minecraft:crafting_special_shulkerboxcoloring" :: CraftingShulkerBoxColoring,
+    "minecraft:crafting_special_suspiciousstew" :: CraftingSuspiciousStew,
+    "minecraft:smelting" :: Smelting(RecipeSmeltingSpec),
+    "minecraft:blasting" :: Blasting(RecipeSmeltingSpec),
+    "minecraft:smoking" :: Smoking(RecipeSmeltingSpec),
+    "minecraft:campfire_cooking" :: CampfireCooking(RecipeSmeltingSpec),
+    "minecraft:stonecutting" :: StoneCutting(RecipeStonecuttingSpec)
+);
 
 impl Serialize for RecipeSpec {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
@@ -3612,71 +2565,12 @@ impl Deserialize for RecipeSpec {
             data,
         } = String::mc_deserialize(data)?;
 
-        use Recipe::*;
-        Ok(match _type.as_str() {
-            "minecraft:crafting_shapeless" => {
-                Ok(RecipeCraftingShapelessSpec::mc_deserialize(data)?
-                    .map(move |b| CraftingShapeless(b)))
-            }
-            "minecraft:crafting_shaped" => {
-                Ok(RecipeCraftingShapedSpec::mc_deserialize(data)?.map(move |b| CraftingShaped(b)))
-            }
-            "minecraft:crafting_special_armordye" => Deserialized::ok(CraftingArmorDye, data),
-            "minecraft:crafting_special_bookcloning" => Deserialized::ok(CraftingBookCloning, data),
-            "minecraft:crafting_special_mapcloning" => Deserialized::ok(CraftingMapCloning, data),
-            "minecraft:crafting_special_mapextending" => {
-                Deserialized::ok(CraftingMapExtending, data)
-            }
-            "minecraft:crafting_special_firework_rocket" => {
-                Deserialized::ok(CraftingFireworkRocket, data)
-            }
-            "minecraft:crafting_special_firework_star" => {
-                Deserialized::ok(CraftingFireworkStar, data)
-            }
-            "minecraft:crafting_special_firework_star_fade" => {
-                Deserialized::ok(CraftingFireworkStarFade, data)
-            }
-            "minecraft:crafting_special_repairitem" => Deserialized::ok(CraftingRepairItem, data),
-            "minecraft:crafting_special_tippedarrow" => Deserialized::ok(CraftingTippedArrow, data),
-            "minecraft:crafting_special_bannerduplicate" => {
-                Deserialized::ok(CraftingBannerDuplicate, data)
-            }
-            "minecraft:crafting_special_banneraddpattern" => {
-                Deserialized::ok(CraftingBannerAddPattern, data)
-            }
-            "minecraft:crafting_special_shielddecoration" => {
-                Deserialized::ok(CraftingShieldDecoration, data)
-            }
-            "minecraft:crafting_special_shulkerboxcoloring" => {
-                Deserialized::ok(CraftingShulkerBoxColoring, data)
-            }
-            "minecraft:crafting_special_suspiciousstew" => {
-                Deserialized::ok(CraftingSuspiciousStew, data)
-            }
-            "minecraft:smelting" => {
-                Ok(RecipeSmeltingSpec::mc_deserialize(data)?.map(move |b| Smelting(b)))
-            }
-            "minecraft:blasting" => {
-                Ok(RecipeSmeltingSpec::mc_deserialize(data)?.map(move |b| Blasting(b)))
-            }
-            "minecraft:smoking" => {
-                Ok(RecipeSmeltingSpec::mc_deserialize(data)?.map(move |b| Smoking(b)))
-            }
-            "minecraft:campfire_cooking" => {
-                Ok(RecipeSmeltingSpec::mc_deserialize(data)?.map(move |b| CampfireCooking(b)))
-            }
-            "minecraft:stonecutting" => {
-                Ok(RecipeStonecuttingSpec::mc_deserialize(data)?.map(move |b| StoneCutting(b)))
-            }
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
-                "invalid crafting recipe kind {:?}",
-                other
-            ))),
-        }?
-            .map(move |recipe_body| RecipeSpec {
+        Ok(Recipe::deserialize_with_id(_type.as_str(), data)?.map(move |recipe| {
+            RecipeSpec {
                 id: recipe_id,
-                recipe: recipe_body,
-            }))
+                recipe,
+            }
+        }))
     }
 }
 
@@ -3684,7 +2578,7 @@ impl Deserialize for RecipeSpec {
 impl TestRandom for RecipeSpec {
     fn test_gen_random() -> Self {
         RecipeSpec {
-            recipe: Recipe::CraftingRepairItem,
+            recipe: Recipe::test_gen_random(),
             id: String::test_gen_random(),
         }
     }
@@ -3725,30 +2619,18 @@ impl Serialize for RecipeCraftingShapedSpec {
 impl Deserialize for RecipeCraftingShapedSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         let Deserialized { value: width, data } = <VarInt>::mc_deserialize(data)?;
-        let Deserialized {
-            value: height,
-            data,
-        } = <VarInt>::mc_deserialize(data)?;
-        let Deserialized {
-            value: group,
-            mut data,
-        } = <String>::mc_deserialize(data)?;
+        let Deserialized { value: height, data } = <VarInt>::mc_deserialize(data)?;
+        let Deserialized { value: group, mut data } = <String>::mc_deserialize(data)?;
 
         let ingredients_count = width.0 as usize * height.0 as usize;
         let mut ingredients: Vec<RecipeIngredient> = Vec::with_capacity(ingredients_count);
         for _ in 0..ingredients_count {
-            let Deserialized {
-                value: elem,
-                data: rest,
-            } = RecipeIngredient::mc_deserialize(data)?;
+            let Deserialized { value: elem, data: rest } = RecipeIngredient::mc_deserialize(data)?;
             data = rest;
             ingredients.push(elem);
         }
 
-        let Deserialized {
-            value: result,
-            data,
-        } = <Option<Slot>>::mc_deserialize(data)?;
+        let Deserialized { value: result, data } = <Option<Slot>>::mc_deserialize(data)?;
 
         Deserialized::ok(
             Self {
@@ -3766,12 +2648,24 @@ impl Deserialize for RecipeCraftingShapedSpec {
 #[cfg(test)]
 impl TestRandom for RecipeCraftingShapedSpec {
     fn test_gen_random() -> Self {
+        use rand::distributions::Distribution;
+        let size_distr = rand::distributions::Uniform::new(1, 9);
+        let mut rng = rand::thread_rng();
+
+        let width: VarInt = size_distr.sample(&mut rng).into();
+        let height: VarInt = size_distr.sample(&mut rng).into();
+        let n_ingredients = (width.0 as usize) * (height.0 as usize);
+        let mut ingredients = Vec::with_capacity(n_ingredients);
+        for _ in 0..n_ingredients {
+            ingredients.push(RecipeIngredient::test_gen_random());
+        }
+
         RecipeCraftingShapedSpec {
-            width: VarInt::test_gen_random(),
-            height: VarInt::test_gen_random(),
+            width,
+            height,
             group: String::test_gen_random(),
-            ingredients: vec![RecipeIngredient::test_gen_random()],
-            result: <Option<Slot>>::test_gen_random(),
+            ingredients,
+            result: Some(Slot::test_gen_random()),
         }
     }
 }
@@ -3988,14 +2882,14 @@ impl std::fmt::Debug for LightingData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-           "LightingData(update={:018b}, reset={:018b}, size={}, bytes={})",
-           self.update_mask().0,
-           self.reset_mask().0,
-           self.data.iter().filter(move |v| v.is_some()).count(),
-           self.data.iter()
-               .filter_map(move |v| v.
-                   map(move |arr| arr.len()))
-               .sum::<usize>())
+            "LightingData(update={:018b}, reset={:018b}, size={}, bytes={})",
+            self.update_mask().0,
+            self.reset_mask().0,
+            self.data.iter().filter(move |v| v.is_some()).count(),
+            self.data.iter()
+                .filter_map(move |v| v.
+                    map(move |arr| arr.len()))
+                .sum::<usize>())
     }
 }
 
@@ -4119,1373 +3013,461 @@ pub mod tests {
     use crate::types::BytesSerializer;
     use test::Bencher;
 
-    packet_test_cases!(
-        Packet578,
-        Handshake,
-        HandshakeSpec,
-        test_handshake,
-        bench_write_handshake,
-        bench_read_handshake
-    );
-
-    packet_test_cases!(
-        Packet578,
-        StatusRequest,
-        StatusRequestSpec,
-        test_status_request,
-        bench_write_status_request,
-        bench_read_status_request
-    );
-
-    packet_test_cases!(
-        Packet578,
-        StatusPing,
-        StatusPingSpec,
-        test_status_ping,
-        bench_write_status_ping,
-        bench_read_status_ping
-    );
-
-    packet_test_cases!(
-        Packet578,
-        StatusResponse,
-        StatusResponseSpec,
-        test_status_response,
-        bench_write_status_response,
-        bench_read_status_response
-    );
-
-    packet_test_cases!(
-        Packet578,
-        StatusPong,
-        StatusPongSpec,
-        test_status_pong,
-        bench_write_status_pong,
-        bench_read_status_pong
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginDisconnect,
-        LoginDisconnectSpec,
-        test_login_disconnect,
-        bench_write_login_disconnect,
-        bench_read_login_disconnect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginEncryptionRequest,
-        LoginEncryptionRequestSpec,
-        test_login_encryption_request,
-        bench_write_login_encryption_request,
-        bench_read_login_encryption_request
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginSuccess,
-        LoginSuccessSpec,
-        test_login_success,
-        bench_write_login_success,
-        bench_read_login_success
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginSetCompression,
-        LoginSetCompressionSpec,
-        test_login_set_compression,
-        bench_write_login_set_compression,
-        bench_read_login_set_compression
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginPluginRequest,
-        LoginPluginRequestSpec,
-        test_login_plugin_request,
-        bench_write_login_plugin_request,
-        bench_read_login_plugin_request
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginStart,
-        LoginStartSpec,
-        test_login_start,
-        bench_write_login_start,
-        bench_read_login_start
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginEncryptionResponse,
-        LoginEncryptionResponseSpec,
-        test_login_encryption_response,
-        bench_write_login_encryption_response,
-        bench_read_login_encryption_response
-    );
-
-    packet_test_cases!(
-        Packet578,
-        LoginPluginResponse,
-        LoginPluginResponseSpec,
-        test_login_plugin_response,
-        bench_write_login_plugin_response,
-        bench_read_login_plugin_response
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnEntity,
-        PlaySpawnEntitySpec,
-        test_play_spawn_entity,
-        bench_write_play_spawn_entity,
-        bench_read_play_spawn_entity
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnExperienceOrb,
-        PlaySpawnExperienceOrbSpec,
-        test_play_spawn_experience_orb,
-        bench_write_play_spawn_experience_orb,
-        bench_read_play_spawn_experience_orb
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnWeatherEntity,
-        PlaySpawnWeatherEntitySpec,
-        test_play_spawn_weather_entity,
-        bench_write_play_spawn_weather_entity,
-        bench_read_play_spawn_weather_entity
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnLivingEntity,
-        PlaySpawnLivingEntitySpec,
-        test_play_spawn_living_entity,
-        bench_write_play_spawn_living_entity,
-        bench_read_play_spawn_living_entity
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnPainting,
-        PlaySpawnPaintingSpec,
-        test_play_spawn_painting,
-        bench_write_play_spawn_painting,
-        bench_read_play_spawn_painting
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnPlayer,
-        PlaySpawnPlayerSpec,
-        test_play_spawn_player,
-        bench_write_play_spawn_player,
-        bench_read_play_spawn_player
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityAnimation,
-        PlayEntityAnimationSpec,
-        test_play_entity_animation,
-        bench_write_play_entity_animation,
-        bench_read_play_entity_animation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayStatistics,
-        PlayStatisticsSpec,
-        test_play_statistics,
-        bench_write_play_statistics,
-        bench_read_play_statistics
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayAcknowledgePlayerDigging,
-        PlayAcknowledgePlayerDiggingSpec,
-        test_play_acknowledge_player_digging,
-        bench_write_play_acknowledge_player_digging,
-        bench_read_play_acknowledge_player_digging
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayBlockBreakAnimation,
-        PlayBlockBreakAnimationSpec,
-        test_play_block_break_animation,
-        bench_write_play_block_break_animation,
-        bench_read_play_block_break_animation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayBlockEntityData,
-        PlayBlockEntityDataSpec,
-        test_play_block_entity_data,
-        bench_write_play_block_entity_data,
-        bench_read_play_block_entity_data
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayBlockAction,
-        PlayBlockActionSpec,
-        test_play_block_action,
-        bench_write_play_block_action,
-        bench_read_play_block_action
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayBlockChange,
-        PlayBlockChangeSpec,
-        test_play_block_change,
-        bench_write_play_block_change,
-        bench_read_play_block_change
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayBossBar,
-        PlayBossBarSpec,
-        test_play_boss_bar,
-        bench_write_play_boss_bar,
-        bench_read_play_boss_bar
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerDifficulty,
-        PlayServerDifficultySpec,
-        test_play_server_difficulty,
-        bench_write_play_server_difficulty,
-        bench_read_play_server_difficulty
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerChatMessage,
-        PlayServerChatMessageSpec,
-        test_play_server_chat_message,
-        bench_write_play_server_chat_message,
-        bench_read_play_server_chat_message
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayMultiBlockChange,
-        PlayMultiBlockChangeSpec,
-        test_play_multi_block_change,
-        bench_write_play_multi_block_change,
-        bench_read_play_multi_block_change
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTabComplete,
-        PlayTabCompleteSpec,
-        test_play_tab_complete,
-        bench_write_play_tab_complete,
-        bench_read_play_tab_complete
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayDeclareCommands,
-        PlayDeclareCommandsSpec,
-        test_play_declare_commands,
-        bench_write_play_declare_commands,
-        bench_read_play_declare_commands
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerWindowConfirmation,
-        PlayServerWindowConfirmationSpec,
-        test_play_server_window_confirmation,
-        bench_write_play_server_window_confirmation,
-        bench_read_play_server_window_confirmation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerCloseWindow,
-        PlayServerCloseWindowSpec,
-        test_play_server_close_window,
-        bench_write_play_server_close_window,
-        bench_read_play_server_close_window
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayWindowItems,
-        PlayWindowItemsSpec,
-        test_play_window_items,
-        bench_write_play_window_items,
-        bench_read_play_window_items
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayWindowProperty,
-        PlayWindowPropertySpec,
-        test_play_window_property,
-        bench_write_play_window_property,
-        bench_read_play_window_property
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySetSlot,
-        PlaySetSlotSpec,
-        test_play_set_slot,
-        bench_write_play_set_slot,
-        bench_read_play_set_slot
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySetCooldown,
-        PlaySetCooldownSpec,
-        test_play_set_cooldown,
-        bench_write_play_set_cooldown,
-        bench_read_play_set_cooldown
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerPluginMessage,
-        PlayServerPluginMessageSpec,
-        test_play_server_plugin_message,
-        bench_write_play_server_plugin_message,
-        bench_read_play_server_plugin_message
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayNamedSoundEffect,
-        PlayNamedSoundEffectSpec,
-        test_play_named_sound_effect,
-        bench_write_play_named_sound_effect,
-        bench_read_play_named_sound_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayDisconnect,
-        PlayDisconnectSpec,
-        test_play_disconnect,
-        bench_write_play_disconnect,
-        bench_read_play_disconnect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityStatus,
-        PlayEntityStatusSpec,
-        test_play_entity_status,
-        bench_write_play_entity_status,
-        bench_read_play_entity_status
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayExplosion,
-        PlayExplosionSpec,
-        test_play_explosion,
-        bench_write_play_explosion,
-        bench_read_play_explosion
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUnloadChunk,
-        PlayUnloadChunkSpec,
-        test_play_unload_chunk,
-        bench_write_play_unload_chunk,
-        bench_read_play_unload_chunk
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayChangeGameState,
-        PlayChangeGameStateSpec,
-        test_play_change_game_state,
-        bench_write_play_change_game_state,
-        bench_read_play_change_game_state
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayOpenHorseWindow,
-        PlayOpenHorseWindowSpec,
-        test_play_open_horse_window,
-        bench_write_play_open_horse_window,
-        bench_read_play_open_horse_window
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerKeepAlive,
-        PlayServerKeepAliveSpec,
-        test_play_server_keep_alive,
-        bench_write_play_server_keep_alive,
-        bench_read_play_server_keep_alive
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayChunkData,
-        PlayChunkDataWrapper,
-        test_play_chunk_data,
-        bench_write_play_chunk_data,
-        bench_read_play_chunk_data
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEffect,
-        PlayEffectSpec,
-        test_play_effect,
-        bench_write_play_effect,
-        bench_read_play_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayParticle,
-        PlayParticleSpec,
-        test_play_particle,
-        bench_write_play_particle,
-        bench_read_play_particle
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateLight,
-        PlayUpdateLightSpec,
-        test_play_update_light,
-        bench_write_play_update_light,
-        bench_read_play_update_light
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayJoinGame,
-        PlayJoinGameSpec,
-        test_play_join_game,
-        bench_write_play_join_game,
-        bench_read_play_join_game
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayMapData,
-        PlayMapDataSpec,
-        test_play_map_data,
-        bench_write_play_map_data,
-        bench_read_play_map_data
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTradeList,
-        PlayTradeListSpec,
-        test_play_trade_list,
-        bench_write_play_trade_list,
-        bench_read_play_trade_list
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityPosition,
-        PlayEntityPositionSpec,
-        test_play_entity_position,
-        bench_write_play_entity_position,
-        bench_read_play_entity_position
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityPositionAndRotation,
-        PlayEntityPositionAndRotationSpec,
-        test_play_entity_position_and_rotation,
-        bench_write_play_entity_position_and_rotation,
-        bench_read_play_entity_position_and_rotation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityRotation,
-        PlayEntityRotationSpec,
-        test_play_entity_rotation,
-        bench_write_play_entity_rotation,
-        bench_read_play_entity_rotation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityMovement,
-        PlayEntityMovementSpec,
-        test_play_entity_movement,
-        bench_write_play_entity_movement,
-        bench_read_play_entity_movement
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerVehicleMove,
-        PlayEntityVehicleMoveSpec,
-        test_play_server_vehicle_move,
-        bench_write_play_server_vehicle_move,
-        bench_read_play_server_vehicle_move
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayOpenBook,
-        PlayOpenBookSpec,
-        test_play_open_book,
-        bench_write_play_open_book,
-        bench_read_play_open_book
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayOpenWindow,
-        PlayOpenWindowSpec,
-        test_play_open_window,
-        bench_write_play_open_window,
-        bench_read_play_open_window
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayOpenSignEditor,
-        PlayOpenSignEditorSpec,
-        test_play_open_sign_editor,
-        bench_write_play_open_sign_editor,
-        bench_read_play_open_sign_editor
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayCraftRecipeResponse,
-        PlayCraftRecipeResponseSpec,
-        test_play_craft_recipe_response,
-        bench_write_play_craft_recipe_response,
-        bench_read_play_craft_recipe_response
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerPlayerAbilities,
-        PlayServerPlayerAbilitiesSpec,
-        test_play_server_player_abilities,
-        bench_write_play_server_player_abilities,
-        bench_read_play_server_player_abilities
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayCombatEvent,
-        PlayCombatEventSpec,
-        test_play_combat_event,
-        bench_write_play_combat_event,
-        bench_read_play_combat_event
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayPlayerInfo,
-        PlayPlayerInfoSpec,
-        test_play_player_info,
-        bench_write_play_player_info,
-        bench_read_play_player_info
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayFacePlayer,
-        PlayFacePlayerSpec,
-        test_play_face_player,
-        bench_write_play_face_player,
-        bench_read_play_face_player
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerPlayerPositionAndLook,
-        PlayServerPlayerPositionAndLookSpec,
-        test_play_server_player_position_and_look,
-        bench_write_play_server_player_position_and_look,
-        bench_read_play_server_player_position_and_look
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUnlockRecipes,
-        PlayUnlockRecipesSpec,
-        test_play_unlock_recipes,
-        bench_write_play_unlock_recipes,
-        bench_read_play_unlock_recipes
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayDestroyEntities,
-        PlayDestroyEntitiesSpec,
-        test_play_destroy_entities,
-        bench_write_play_destroy_entities,
-        bench_read_play_destroy_entities
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayRemoveEntityEffect,
-        PlayRemoveEntityEffectSpec,
-        test_play_remove_entity_effect,
-        bench_write_play_remove_entity_effect,
-        bench_read_play_remove_entity_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayResourcePackSend,
-        PlayResourcePackSendSpec,
-        test_play_resource_pack_send,
-        bench_write_play_resource_pack_send,
-        bench_read_play_resource_pack_send
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayRespawn,
-        PlayRespawnSpec,
-        test_play_respawn,
-        bench_write_play_respawn,
-        bench_read_play_respawn
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityHeadLook,
-        PlayEntityHeadLookSpec,
-        test_play_entity_head_look,
-        bench_write_play_entity_head_look,
-        bench_read_play_entity_head_look
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySelectAdvancementTab,
-        PlaySelectAdvancementTabSpec,
-        test_play_select_advancement_tab,
-        bench_write_play_select_advancement_tab,
-        bench_read_play_select_advancement_tab
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayWorldBorder,
-        PlayWorldBorderSpec,
-        test_play_world_border,
-        bench_write_play_world_border,
-        bench_read_play_world_border
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayCamera,
-        PlayCameraSpec,
-        test_play_camera,
-        bench_write_play_camera,
-        bench_read_play_camera
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayServerHeldItemChange,
-        PlayServerHeldItemChangeSpec,
-        test_play_server_held_item_change,
-        bench_write_play_server_held_item_change,
-        bench_read_play_server_held_item_change
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateViewPosition,
-        PlayUpdateViewPositionSpec,
-        test_play_update_view_position,
-        bench_write_play_update_view_position,
-        bench_read_play_update_view_position
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateViewDistance,
-        PlayUpdateViewDistanceSpec,
-        test_play_update_view_distance,
-        bench_write_play_update_view_distance,
-        bench_read_play_update_view_distance
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayDisplayScoreboard,
-        PlayDisplayScoreboardSpec,
-        test_play_display_scoreboard,
-        bench_write_play_display_scoreboard,
-        bench_read_play_display_scoreboard
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityMetadata,
-        PlayEntityMetadataSpec,
-        test_play_entity_metadata,
-        bench_write_play_entity_metadata,
-        bench_read_play_entity_metadata
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayAttachEntity,
-        PlayAttachEntitySpec,
-        test_play_attach_entity,
-        bench_write_play_attach_entity,
-        bench_read_play_attach_entity
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityVelocity,
-        PlayEntityVelocitySpec,
-        test_play_entity_velocity,
-        bench_write_play_entity_velocity,
-        bench_read_play_entity_velocity
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityEquipment,
-        PlayEntityEquiptmentSpec,
-        test_play_entity_equipment,
-        bench_write_play_entity_equipment,
-        bench_read_play_entity_equipment
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySetExperience,
-        PlaySetExperienceSpec,
-        test_play_set_experience,
-        bench_write_play_set_experience,
-        bench_read_play_set_experience
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdatehealth,
-        PlayUpdateHealthSpec,
-        test_play_updatehealth,
-        bench_write_play_updatehealth,
-        bench_read_play_updatehealth
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayScoreboardObjective,
-        PlayScoreboardObjectiveSpec,
-        test_play_scoreboard_objective,
-        bench_write_play_scoreboard_objective,
-        bench_read_play_scoreboard_objective
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySetPassengers,
-        PlaySetPassengersSpec,
-        test_play_set_passengers,
-        bench_write_play_set_passengers,
-        bench_read_play_set_passengers
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTeams,
-        PlayTeamsSpec,
-        test_play_teams,
-        bench_write_play_teams,
-        bench_read_play_teams
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateScore,
-        PlayUpdateScoreSpec,
-        test_play_update_score,
-        bench_write_play_update_score,
-        bench_read_play_update_score
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpawnPosition,
-        PlaySpawnPositionSpec,
-        test_play_spawn_position,
-        bench_write_play_spawn_position,
-        bench_read_play_spawn_position
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTimeUpdate,
-        PlayTimeUpdateSpec,
-        test_play_time_update,
-        bench_write_play_time_update,
-        bench_read_play_time_update
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTitle,
-        PlayTitleSpec,
-        test_play_title,
-        bench_write_play_title,
-        bench_read_play_title
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntitySoundEffect,
-        PlayEntitySoundEffectSpec,
-        test_play_entity_sound_effect,
-        bench_write_play_entity_sound_effect,
-        bench_read_play_entity_sound_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySoundEffect,
-        PlaySoundEffectSpec,
-        test_play_sound_effect,
-        bench_write_play_sound_effect,
-        bench_read_play_sound_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayStopSound,
-        PlayStopSoundSpec,
-        test_play_stop_sound,
-        bench_write_play_stop_sound,
-        bench_read_play_stop_sound
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayerPlayerListHeaderAndFooter,
-        PlayPlayerListHeaderAndFooterSpec,
-        test_player_player_list_header_and_footer,
-        bench_write_player_player_list_header_and_footer,
-        bench_read_player_player_list_header_and_footer
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayNbtQueryResponse,
-        PlayNbtQueryResponseSpec,
-        test_play_nbt_query_response,
-        bench_write_play_nbt_query_response,
-        bench_read_play_nbt_query_response
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayCollectItem,
-        PlayCollectItemSpec,
-        test_play_collect_item,
-        bench_write_play_collect_item,
-        bench_read_play_collect_item
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityTeleport,
-        PlayEntityTeleportSpec,
-        test_play_entity_teleport,
-        bench_write_play_entity_teleport,
-        bench_read_play_entity_teleport
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayAdvancements,
-        PlayAdvancementsSpec,
-        test_play_advancements,
-        bench_write_play_advancements,
-        bench_read_play_advancements
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityProperties,
-        PlayEntityPropertiesSpec,
-        test_play_entity_properties,
-        bench_write_play_entity_properties,
-        bench_read_play_entity_properties
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityEffect,
-        PlayEntityEffectSpec,
-        test_play_entity_effect,
-        bench_write_play_entity_effect,
-        bench_read_play_entity_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayDeclareRecipes,
-        PlayDeclareRecipesSpec,
-        test_play_declare_recipes,
-        bench_write_play_declare_recipes,
-        bench_read_play_declare_recipes
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTags,
-        PlayTagsSpec,
-        test_play_tags,
-        bench_write_play_tags,
-        bench_read_play_tags
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayTeleportConfirm,
-        PlayTeleportConfirmSpec,
-        test_play_teleport_confirm,
-        bench_write_play_teleport_confirm,
-        bench_read_play_teleport_confirm
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayQueryBlockNbt,
-        PlayQueryBlockNbtSpec,
-        test_play_query_block_nbt,
-        bench_write_play_query_block_nbt,
-        bench_read_play_query_block_nbt
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayQueryEntityNbt,
-        PlayQueryEntityNbtSpec,
-        test_play_query_entity_nbt,
-        bench_write_play_query_entity_nbt,
-        bench_read_play_query_entity_nbt
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySetDifficulty,
-        PlaySetDifficultySpec,
-        test_play_set_difficulty,
-        bench_write_play_set_difficulty,
-        bench_read_play_set_difficulty
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientChatMessage,
-        PlayClientChatMessageSpec,
-        test_play_client_chat_message,
-        bench_write_play_client_chat_message,
-        bench_read_play_client_chat_message
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientStatus,
-        PlayClientStatusSpec,
-        test_play_client_status,
-        bench_write_play_client_status,
-        bench_read_play_client_status
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientSettings,
-        PlayClientSettingsSpec,
-        test_play_client_settings,
-        bench_write_play_client_settings,
-        bench_read_play_client_settings
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientTabComplete,
-        PlayClientTabCompleteSpec,
-        test_play_client_tab_complete,
-        bench_write_play_client_tab_complete,
-        bench_read_play_client_tab_complete
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientWindowConfirmation,
-        PlayClientWindowConfirmationSpec,
-        test_play_client_window_confirmation,
-        bench_write_play_client_window_confirmation,
-        bench_read_play_client_window_confirmation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClickWindowButton,
-        PlayClickWindowButtonSpec,
-        test_play_click_window_button,
-        bench_write_play_click_window_button,
-        bench_read_play_click_window_button
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClickWindow,
-        PlayClickWindowSpec,
-        test_play_click_window,
-        bench_write_play_click_window,
-        bench_read_play_click_window
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientCloseWindow,
-        PlayClientCloseWindowSpec,
-        test_play_client_close_window,
-        bench_write_play_client_close_window,
-        bench_read_play_client_close_window
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientPluginMessage,
-        PlayClientPluginMessageSpec,
-        test_play_client_plugin_message,
-        bench_write_play_client_plugin_message,
-        bench_read_play_client_plugin_message
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEditBook,
-        PlayEditBookSpec,
-        test_play_edit_book,
-        bench_write_play_edit_book,
-        bench_read_play_edit_book
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayInteractEntity,
-        PlayInteractEntitySpec,
-        test_play_interact_entity,
-        bench_write_play_interact_entity,
-        bench_read_play_interact_entity
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientKeepAlive,
-        PlayClientKeepAliveSpec,
-        test_play_client_keep_alive,
-        bench_write_play_client_keep_alive,
-        bench_read_play_client_keep_alive
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayLockDifficulty,
-        PlayLockDifficultySpec,
-        test_play_lock_difficulty,
-        bench_write_play_lock_difficulty,
-        bench_read_play_lock_difficulty
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayPlayerPosition,
-        PlayPlayerPositionSpec,
-        test_play_player_position,
-        bench_write_play_player_position,
-        bench_read_play_player_position
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientPlayerPositionAndRotation,
-        PlayClientPlayerPositionAndRotationSpec,
-        test_play_client_player_position_and_rotation,
-        bench_write_play_client_player_position_and_rotation,
-        bench_read_play_client_player_position_and_rotation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayPlayerRotation,
-        PlayPlayerRotationSpec,
-        test_play_player_rotation,
-        bench_write_play_player_rotation,
-        bench_read_play_player_rotation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayPlayerMovement,
-        PlayPlayerMovementSpec,
-        test_play_player_movement,
-        bench_write_play_player_movement,
-        bench_read_play_player_movement
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientVehicleMove,
-        PlayClientVehicleMoveSpec,
-        test_play_client_vehicle_move,
-        bench_write_play_client_vehicle_move,
-        bench_read_play_client_vehicle_move
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySteerBoat,
-        PlaySteerBoatSpec,
-        test_play_steer_boat,
-        bench_write_play_steer_boat,
-        bench_read_play_steer_boat
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayPickItem,
-        PlayPickItemSpec,
-        test_play_pick_item,
-        bench_write_play_pick_item,
-        bench_read_play_pick_item
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayCraftRecipeRequest,
-        PlayCraftRecipeRequestSpec,
-        test_play_craft_recipe_request,
-        bench_write_play_craft_recipe_request,
-        bench_read_play_craft_recipe_request
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientPlayerAbilities,
-        PlayClientPlayerAbilitiesSpec,
-        test_play_client_player_abilities,
-        bench_write_play_client_player_abilities,
-        bench_read_play_client_player_abilities
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayPlayerDigging,
-        PlayPlayerDiggingSpec,
-        test_play_player_digging,
-        bench_write_play_player_digging,
-        bench_read_play_player_digging
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayEntityAction,
-        PlayEntityActionSpec,
-        test_play_entity_action,
-        bench_write_play_entity_action,
-        bench_read_play_entity_action
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySteerVehicle,
-        PlaySteerVehicleSpec,
-        test_play_steer_vehicle,
-        bench_write_play_steer_vehicle,
-        bench_read_play_steer_vehicle
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayRecipeBookData,
-        PlayRecipeBookDataSpec,
-        test_play_recipe_book_data,
-        bench_write_play_recipe_book_data,
-        bench_read_play_recipe_book_data
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayNameItem,
-        PlayNameItemSpec,
-        test_play_name_item,
-        bench_write_play_name_item,
-        bench_read_play_name_item
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayResourcePackStatus,
-        PlayResourcePackStatusSpec,
-        test_play_resource_pack_status,
-        bench_write_play_resource_pack_status,
-        bench_read_play_resource_pack_status
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayAdvancementTab,
-        PlayAdvancementTabSpec,
-        test_play_advancement_tab,
-        bench_write_play_advancement_tab,
-        bench_read_play_advancement_tab
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySelectTrade,
-        PlaySelectTradeSpec,
-        test_play_select_trade,
-        bench_write_play_select_trade,
-        bench_read_play_select_trade
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySetBeaconEffect,
-        PlaySetBeaconEffectSpec,
-        test_play_set_beacon_effect,
-        bench_write_play_set_beacon_effect,
-        bench_read_play_set_beacon_effect
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientHeldItemChange,
-        PlayClientHeldItemChangeSpec,
-        test_play_client_held_item_change,
-        bench_write_play_client_held_item_change,
-        bench_read_play_client_held_item_change
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateCommandBlock,
-        PlayUpdateCommandBlockSpec,
-        test_play_update_command_block,
-        bench_write_play_update_command_block,
-        bench_read_play_update_command_block
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateCommandBlockMinecart,
-        PlayUpdateCommandBlockMinecartSpec,
-        test_play_update_command_block_minecart,
-        bench_write_play_update_command_block_minecart,
-        bench_read_play_update_command_block_minecart
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayCreativeInventoryAction,
-        PlayCreativeInventoryActionSpec,
-        test_play_creative_inventory_action,
-        bench_write_play_creative_inventory_action,
-        bench_read_play_creative_inventory_action
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateJigsawBlock,
-        PlayUpdateJigsawBlockSpec,
-        test_play_update_jigsaw_block,
-        bench_write_play_update_jigsaw_block,
-        bench_read_play_update_jigsaw_block
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateStructureBlock,
-        PlayUpdateStructureBlockSpec,
-        test_play_update_structure_block,
-        bench_write_play_update_structure_block,
-        bench_read_play_update_structure_block
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUpdateSign,
-        PlayUpdateSignSpec,
-        test_play_update_sign,
-        bench_write_play_update_sign,
-        bench_read_play_update_sign
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayClientAnimation,
-        PlayClientAnimationSpec,
-        test_play_client_animation,
-        bench_write_play_client_animation,
-        bench_read_play_client_animation
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlaySpectate,
-        PlaySpectateSpec,
-        test_play_spectate,
-        bench_write_play_spectate,
-        bench_read_play_spectate
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayBlockPlacement,
-        PlayBlockPlacementSpec,
-        test_play_block_placement,
-        bench_write_play_block_placement,
-        bench_read_play_block_placement
-    );
-
-    packet_test_cases!(
-        Packet578,
-        PlayUseItem,
-        PlayUseItemSpec,
-        test_play_use_item,
-        bench_write_play_use_item,
-        bench_read_play_use_item
-    );
+    packet_test_cases!(Packet578, Handshake, HandshakeSpec,
+        test_handshake, bench_write_handshake, bench_read_handshake);
+
+    packet_test_cases!(Packet578, StatusRequest, StatusRequestSpec,
+        test_status_request, bench_write_status_request, bench_read_status_request);
+
+    packet_test_cases!(Packet578, StatusPing, StatusPingSpec,
+        test_status_ping, bench_write_status_ping, bench_read_status_ping);
+
+    packet_test_cases!(Packet578, StatusResponse, StatusResponseSpec,
+        test_status_response, bench_write_status_response, bench_read_status_response);
+
+    packet_test_cases!(Packet578, StatusPong, StatusPongSpec,
+        test_status_pong, bench_write_status_pong, bench_read_status_pong);
+
+    packet_test_cases!(Packet578, LoginDisconnect, LoginDisconnectSpec,
+        test_login_disconnect, bench_write_login_disconnect, bench_read_login_disconnect);
+
+    packet_test_cases!(Packet578, LoginEncryptionRequest, LoginEncryptionRequestSpec,
+        test_login_encryption_request, bench_write_login_encryption_request, bench_read_login_encryption_request);
+
+    packet_test_cases!(Packet578, LoginSuccess, LoginSuccessSpec,
+        test_login_success, bench_write_login_success, bench_read_login_success);
+
+    packet_test_cases!(Packet578, LoginSetCompression, LoginSetCompressionSpec,
+        test_login_set_compression, bench_write_login_set_compression, bench_read_login_set_compression);
+
+    packet_test_cases!(Packet578, LoginPluginRequest, LoginPluginRequestSpec,
+        test_login_plugin_request, bench_write_login_plugin_request, bench_read_login_plugin_request);
+
+    packet_test_cases!(Packet578, LoginStart, LoginStartSpec,
+        test_login_start, bench_write_login_start, bench_read_login_start);
+
+    packet_test_cases!(Packet578, LoginEncryptionResponse, LoginEncryptionResponseSpec,
+        test_login_encryption_response, bench_write_login_encryption_response, bench_read_login_encryption_response);
+
+    packet_test_cases!(Packet578, LoginPluginResponse, LoginPluginResponseSpec,
+        test_login_plugin_response, bench_write_login_plugin_response, bench_read_login_plugin_response);
+
+    packet_test_cases!(Packet578, PlaySpawnEntity, PlaySpawnEntitySpec,
+        test_play_spawn_entity, bench_write_play_spawn_entity, bench_read_play_spawn_entity);
+
+    packet_test_cases!(Packet578, PlaySpawnExperienceOrb, PlaySpawnExperienceOrbSpec,
+        test_play_spawn_experience_orb, bench_write_play_spawn_experience_orb, bench_read_play_spawn_experience_orb);
+
+    packet_test_cases!(Packet578, PlaySpawnWeatherEntity, PlaySpawnWeatherEntitySpec,
+        test_play_spawn_weather_entity, bench_write_play_spawn_weather_entity, bench_read_play_spawn_weather_entity);
+
+    packet_test_cases!(Packet578, PlaySpawnLivingEntity, PlaySpawnLivingEntitySpec,
+        test_play_spawn_living_entity, bench_write_play_spawn_living_entity, bench_read_play_spawn_living_entity);
+
+    packet_test_cases!(Packet578, PlaySpawnPainting, PlaySpawnPaintingSpec,
+        test_play_spawn_painting, bench_write_play_spawn_painting, bench_read_play_spawn_painting);
+
+    packet_test_cases!(Packet578, PlaySpawnPlayer, PlaySpawnPlayerSpec,
+        test_play_spawn_player, bench_write_play_spawn_player, bench_read_play_spawn_player);
+
+    packet_test_cases!(Packet578, PlayEntityAnimation, PlayEntityAnimationSpec,
+        test_play_entity_animation, bench_write_play_entity_animation, bench_read_play_entity_animation);
+
+    packet_test_cases!(Packet578, PlayStatistics, PlayStatisticsSpec,
+        test_play_statistics, bench_write_play_statistics, bench_read_play_statistics);
+
+    packet_test_cases!(Packet578, PlayAcknowledgePlayerDigging, PlayAcknowledgePlayerDiggingSpec,
+        test_play_acknowledge_player_digging, bench_write_play_acknowledge_player_digging, bench_read_play_acknowledge_player_digging);
+
+    packet_test_cases!(Packet578, PlayBlockBreakAnimation, PlayBlockBreakAnimationSpec,
+        test_play_block_break_animation, bench_write_play_block_break_animation, bench_read_play_block_break_animation);
+
+    packet_test_cases!(Packet578, PlayBlockEntityData, PlayBlockEntityDataSpec,
+        test_play_block_entity_data, bench_write_play_block_entity_data, bench_read_play_block_entity_data);
+
+    packet_test_cases!(Packet578, PlayBlockAction, PlayBlockActionSpec,
+        test_play_block_action, bench_write_play_block_action, bench_read_play_block_action);
+
+    packet_test_cases!(Packet578, PlayBlockChange, PlayBlockChangeSpec,
+        test_play_block_change, bench_write_play_block_change, bench_read_play_block_change);
+
+    packet_test_cases!(Packet578, PlayBossBar, PlayBossBarSpec,
+        test_play_boss_bar, bench_write_play_boss_bar, bench_read_play_boss_bar);
+
+    packet_test_cases!(Packet578, PlayServerDifficulty, PlayServerDifficultySpec,
+        test_play_server_difficulty, bench_write_play_server_difficulty, bench_read_play_server_difficulty);
+
+    packet_test_cases!(Packet578, PlayServerChatMessage, PlayServerChatMessageSpec,
+        test_play_server_chat_message, bench_write_play_server_chat_message, bench_read_play_server_chat_message);
+
+    packet_test_cases!(Packet578, PlayMultiBlockChange, PlayMultiBlockChangeSpec,
+        test_play_multi_block_change, bench_write_play_multi_block_change, bench_read_play_multi_block_change);
+
+    packet_test_cases!(Packet578, PlayTabComplete, PlayTabCompleteSpec,
+        test_play_tab_complete, bench_write_play_tab_complete, bench_read_play_tab_complete);
+
+    packet_test_cases!(Packet578, PlayDeclareCommands, PlayDeclareCommandsSpec,
+        test_play_declare_commands, bench_write_play_declare_commands, bench_read_play_declare_commands);
+
+    packet_test_cases!(Packet578, PlayServerWindowConfirmation, PlayServerWindowConfirmationSpec,
+        test_play_server_window_confirmation, bench_write_play_server_window_confirmation, bench_read_play_server_window_confirmation);
+
+    packet_test_cases!(Packet578, PlayServerCloseWindow, PlayServerCloseWindowSpec,
+        test_play_server_close_window, bench_write_play_server_close_window, bench_read_play_server_close_window);
+
+    packet_test_cases!(Packet578, PlayWindowItems, PlayWindowItemsSpec,
+        test_play_window_items, bench_write_play_window_items, bench_read_play_window_items);
+
+    packet_test_cases!(Packet578, PlayWindowProperty, PlayWindowPropertySpec,
+        test_play_window_property, bench_write_play_window_property, bench_read_play_window_property);
+
+    packet_test_cases!(Packet578, PlaySetSlot, PlaySetSlotSpec,
+        test_play_set_slot, bench_write_play_set_slot, bench_read_play_set_slot);
+
+    packet_test_cases!(Packet578, PlaySetCooldown, PlaySetCooldownSpec,
+        test_play_set_cooldown, bench_write_play_set_cooldown, bench_read_play_set_cooldown);
+
+    packet_test_cases!(Packet578, PlayServerPluginMessage, PlayServerPluginMessageSpec,
+        test_play_server_plugin_message, bench_write_play_server_plugin_message, bench_read_play_server_plugin_message);
+
+    packet_test_cases!(Packet578, PlayNamedSoundEffect, PlayNamedSoundEffectSpec,
+        test_play_named_sound_effect, bench_write_play_named_sound_effect, bench_read_play_named_sound_effect);
+
+    packet_test_cases!(Packet578, PlayDisconnect, PlayDisconnectSpec,
+        test_play_disconnect, bench_write_play_disconnect, bench_read_play_disconnect);
+
+    packet_test_cases!(Packet578, PlayEntityStatus, PlayEntityStatusSpec,
+        test_play_entity_status, bench_write_play_entity_status, bench_read_play_entity_status);
+
+    packet_test_cases!(Packet578, PlayExplosion, PlayExplosionSpec,
+        test_play_explosion, bench_write_play_explosion, bench_read_play_explosion);
+
+    packet_test_cases!(Packet578, PlayUnloadChunk, PlayUnloadChunkSpec,
+        test_play_unload_chunk, bench_write_play_unload_chunk, bench_read_play_unload_chunk);
+
+    packet_test_cases!(Packet578, PlayChangeGameState, PlayChangeGameStateSpec,
+        test_play_change_game_state, bench_write_play_change_game_state, bench_read_play_change_game_state);
+
+    packet_test_cases!(Packet578, PlayOpenHorseWindow, PlayOpenHorseWindowSpec,
+        test_play_open_horse_window, bench_write_play_open_horse_window, bench_read_play_open_horse_window);
+
+    packet_test_cases!(Packet578, PlayServerKeepAlive, PlayServerKeepAliveSpec,
+        test_play_server_keep_alive, bench_write_play_server_keep_alive, bench_read_play_server_keep_alive);
+
+    packet_test_cases!(Packet578, PlayChunkData, PlayChunkDataWrapper,
+        test_play_chunk_data, bench_write_play_chunk_data, bench_read_play_chunk_data);
+
+    packet_test_cases!(Packet578, PlayEffect, PlayEffectSpec,
+        test_play_effect, bench_write_play_effect, bench_read_play_effect);
+
+    packet_test_cases!(Packet578, PlayParticle, PlayParticleSpec,
+        test_play_particle, bench_write_play_particle, bench_read_play_particle);
+
+    packet_test_cases!(Packet578, PlayUpdateLight, PlayUpdateLightSpec,
+        test_play_update_light, bench_write_play_update_light, bench_read_play_update_light);
+
+    packet_test_cases!(Packet578, PlayJoinGame, PlayJoinGameSpec,
+        test_play_join_game, bench_write_play_join_game, bench_read_play_join_game);
+
+    packet_test_cases!(Packet578, PlayMapData, PlayMapDataSpec,
+        test_play_map_data, bench_write_play_map_data, bench_read_play_map_data);
+
+    packet_test_cases!(Packet578, PlayTradeList, PlayTradeListSpec,
+        test_play_trade_list, bench_write_play_trade_list, bench_read_play_trade_list);
+
+    packet_test_cases!(Packet578, PlayEntityPosition, PlayEntityPositionSpec,
+        test_play_entity_position, bench_write_play_entity_position, bench_read_play_entity_position);
+
+    packet_test_cases!(Packet578, PlayEntityPositionAndRotation, PlayEntityPositionAndRotationSpec,
+        test_play_entity_position_and_rotation, bench_write_play_entity_position_and_rotation, bench_read_play_entity_position_and_rotation);
+
+    packet_test_cases!(Packet578, PlayEntityRotation, PlayEntityRotationSpec,
+        test_play_entity_rotation, bench_write_play_entity_rotation, bench_read_play_entity_rotation);
+
+    packet_test_cases!(Packet578, PlayEntityMovement, PlayEntityMovementSpec,
+        test_play_entity_movement, bench_write_play_entity_movement, bench_read_play_entity_movement);
+
+    packet_test_cases!(Packet578, PlayServerVehicleMove, PlayEntityVehicleMoveSpec,
+        test_play_server_vehicle_move, bench_write_play_server_vehicle_move, bench_read_play_server_vehicle_move);
+
+    packet_test_cases!(Packet578, PlayOpenBook, PlayOpenBookSpec,
+        test_play_open_book, bench_write_play_open_book, bench_read_play_open_book);
+
+    packet_test_cases!(Packet578, PlayOpenWindow, PlayOpenWindowSpec,
+        test_play_open_window, bench_write_play_open_window, bench_read_play_open_window);
+
+    packet_test_cases!(Packet578, PlayOpenSignEditor, PlayOpenSignEditorSpec,
+        test_play_open_sign_editor, bench_write_play_open_sign_editor, bench_read_play_open_sign_editor);
+
+    packet_test_cases!(Packet578, PlayCraftRecipeResponse, PlayCraftRecipeResponseSpec,
+        test_play_craft_recipe_response, bench_write_play_craft_recipe_response, bench_read_play_craft_recipe_response);
+
+    packet_test_cases!(Packet578, PlayServerPlayerAbilities, PlayServerPlayerAbilitiesSpec,
+        test_play_server_player_abilities, bench_write_play_server_player_abilities, bench_read_play_server_player_abilities);
+
+    packet_test_cases!(Packet578, PlayCombatEvent, PlayCombatEventSpec,
+        test_play_combat_event, bench_write_play_combat_event, bench_read_play_combat_event);
+
+    packet_test_cases!(Packet578, PlayPlayerInfo, PlayPlayerInfoSpec,
+        test_play_player_info, bench_write_play_player_info, bench_read_play_player_info);
+
+    packet_test_cases!(Packet578, PlayFacePlayer, PlayFacePlayerSpec,
+        test_play_face_player, bench_write_play_face_player, bench_read_play_face_player);
+
+    packet_test_cases!(Packet578, PlayServerPlayerPositionAndLook, PlayServerPlayerPositionAndLookSpec,
+        test_play_server_player_position_and_look, bench_write_play_server_player_position_and_look, bench_read_play_server_player_position_and_look);
+
+    packet_test_cases!(Packet578, PlayUnlockRecipes, PlayUnlockRecipesSpec,
+        test_play_unlock_recipes, bench_write_play_unlock_recipes, bench_read_play_unlock_recipes);
+
+    packet_test_cases!(Packet578, PlayDestroyEntities, PlayDestroyEntitiesSpec,
+        test_play_destroy_entities, bench_write_play_destroy_entities, bench_read_play_destroy_entities);
+
+    packet_test_cases!(Packet578, PlayRemoveEntityEffect, PlayRemoveEntityEffectSpec,
+        test_play_remove_entity_effect, bench_write_play_remove_entity_effect, bench_read_play_remove_entity_effect);
+
+    packet_test_cases!(Packet578, PlayResourcePackSend, PlayResourcePackSendSpec,
+        test_play_resource_pack_send, bench_write_play_resource_pack_send, bench_read_play_resource_pack_send);
+
+    packet_test_cases!(Packet578, PlayRespawn, PlayRespawnSpec,
+        test_play_respawn, bench_write_play_respawn, bench_read_play_respawn);
+
+    packet_test_cases!(Packet578, PlayEntityHeadLook, PlayEntityHeadLookSpec,
+        test_play_entity_head_look, bench_write_play_entity_head_look, bench_read_play_entity_head_look);
+
+    packet_test_cases!(Packet578, PlaySelectAdvancementTab, PlaySelectAdvancementTabSpec,
+        test_play_select_advancement_tab, bench_write_play_select_advancement_tab, bench_read_play_select_advancement_tab);
+
+    packet_test_cases!(Packet578, PlayWorldBorder, PlayWorldBorderSpec,
+        test_play_world_border, bench_write_play_world_border, bench_read_play_world_border);
+
+    packet_test_cases!(Packet578, PlayCamera, PlayCameraSpec,
+        test_play_camera, bench_write_play_camera, bench_read_play_camera);
+
+    packet_test_cases!(Packet578, PlayServerHeldItemChange, PlayServerHeldItemChangeSpec,
+        test_play_server_held_item_change, bench_write_play_server_held_item_change, bench_read_play_server_held_item_change);
+
+    packet_test_cases!(Packet578, PlayUpdateViewPosition, PlayUpdateViewPositionSpec,
+        test_play_update_view_position, bench_write_play_update_view_position, bench_read_play_update_view_position);
+
+    packet_test_cases!(Packet578, PlayUpdateViewDistance, PlayUpdateViewDistanceSpec,
+        test_play_update_view_distance, bench_write_play_update_view_distance, bench_read_play_update_view_distance);
+
+    packet_test_cases!(Packet578, PlayDisplayScoreboard, PlayDisplayScoreboardSpec,
+        test_play_display_scoreboard, bench_write_play_display_scoreboard, bench_read_play_display_scoreboard);
+
+    packet_test_cases!(Packet578, PlayEntityMetadata, PlayEntityMetadataSpec,
+        test_play_entity_metadata, bench_write_play_entity_metadata, bench_read_play_entity_metadata);
+
+    packet_test_cases!(Packet578, PlayAttachEntity, PlayAttachEntitySpec,
+        test_play_attach_entity, bench_write_play_attach_entity, bench_read_play_attach_entity);
+
+    packet_test_cases!(Packet578, PlayEntityVelocity, PlayEntityVelocitySpec,
+        test_play_entity_velocity, bench_write_play_entity_velocity, bench_read_play_entity_velocity);
+
+    packet_test_cases!(Packet578, PlayEntityEquipment, PlayEntityEquiptmentSpec,
+        test_play_entity_equipment, bench_write_play_entity_equipment, bench_read_play_entity_equipment);
+
+    packet_test_cases!(Packet578, PlaySetExperience, PlaySetExperienceSpec,
+        test_play_set_experience, bench_write_play_set_experience, bench_read_play_set_experience);
+
+    packet_test_cases!(Packet578, PlayUpdatehealth, PlayUpdateHealthSpec,
+        test_play_updatehealth, bench_write_play_updatehealth, bench_read_play_updatehealth);
+
+    packet_test_cases!(Packet578, PlayScoreboardObjective, PlayScoreboardObjectiveSpec,
+        test_play_scoreboard_objective, bench_write_play_scoreboard_objective, bench_read_play_scoreboard_objective);
+
+    packet_test_cases!(Packet578, PlaySetPassengers, PlaySetPassengersSpec,
+        test_play_set_passengers, bench_write_play_set_passengers, bench_read_play_set_passengers);
+
+    packet_test_cases!(Packet578, PlayTeams, PlayTeamsSpec,
+        test_play_teams, bench_write_play_teams, bench_read_play_teams);
+
+    packet_test_cases!(Packet578, PlayUpdateScore, PlayUpdateScoreSpec,
+        test_play_update_score, bench_write_play_update_score, bench_read_play_update_score);
+
+    packet_test_cases!(Packet578, PlaySpawnPosition, PlaySpawnPositionSpec,
+        test_play_spawn_position, bench_write_play_spawn_position, bench_read_play_spawn_position);
+
+    packet_test_cases!(Packet578, PlayTimeUpdate, PlayTimeUpdateSpec,
+        test_play_time_update, bench_write_play_time_update, bench_read_play_time_update);
+
+    packet_test_cases!(Packet578, PlayTitle, PlayTitleSpec,
+        test_play_title, bench_write_play_title, bench_read_play_title);
+
+    packet_test_cases!(Packet578, PlayEntitySoundEffect, PlayEntitySoundEffectSpec,
+        test_play_entity_sound_effect, bench_write_play_entity_sound_effect, bench_read_play_entity_sound_effect);
+
+    packet_test_cases!(Packet578, PlaySoundEffect, PlaySoundEffectSpec,
+        test_play_sound_effect, bench_write_play_sound_effect, bench_read_play_sound_effect);
+
+    packet_test_cases!(Packet578, PlayStopSound, PlayStopSoundSpec,
+        test_play_stop_sound, bench_write_play_stop_sound, bench_read_play_stop_sound);
+
+    packet_test_cases!(Packet578, PlayerPlayerListHeaderAndFooter, PlayPlayerListHeaderAndFooterSpec,
+        test_player_player_list_header_and_footer, bench_write_player_player_list_header_and_footer, bench_read_player_player_list_header_and_footer);
+
+    packet_test_cases!(Packet578, PlayNbtQueryResponse, PlayNbtQueryResponseSpec,
+        test_play_nbt_query_response, bench_write_play_nbt_query_response, bench_read_play_nbt_query_response);
+
+    packet_test_cases!(Packet578, PlayCollectItem, PlayCollectItemSpec,
+        test_play_collect_item, bench_write_play_collect_item, bench_read_play_collect_item);
+
+    packet_test_cases!(Packet578, PlayEntityTeleport, PlayEntityTeleportSpec,
+        test_play_entity_teleport, bench_write_play_entity_teleport, bench_read_play_entity_teleport);
+
+    packet_test_cases!(Packet578, PlayAdvancements, PlayAdvancementsSpec,
+        test_play_advancements, bench_write_play_advancements, bench_read_play_advancements);
+
+    packet_test_cases!(Packet578, PlayEntityProperties, PlayEntityPropertiesSpec,
+        test_play_entity_properties, bench_write_play_entity_properties, bench_read_play_entity_properties);
+
+    packet_test_cases!(Packet578, PlayEntityEffect, PlayEntityEffectSpec,
+        test_play_entity_effect, bench_write_play_entity_effect, bench_read_play_entity_effect);
+
+    packet_test_cases!(Packet578, PlayDeclareRecipes, PlayDeclareRecipesSpec,
+        test_play_declare_recipes, bench_write_play_declare_recipes, bench_read_play_declare_recipes);
+
+    packet_test_cases!(Packet578, PlayTags, PlayTagsSpec,
+        test_play_tags, bench_write_play_tags, bench_read_play_tags);
+
+    packet_test_cases!(Packet578, PlayTeleportConfirm, PlayTeleportConfirmSpec,
+        test_play_teleport_confirm, bench_write_play_teleport_confirm, bench_read_play_teleport_confirm);
+
+    packet_test_cases!(Packet578, PlayQueryBlockNbt, PlayQueryBlockNbtSpec,
+        test_play_query_block_nbt, bench_write_play_query_block_nbt, bench_read_play_query_block_nbt);
+
+    packet_test_cases!(Packet578, PlayQueryEntityNbt, PlayQueryEntityNbtSpec,
+        test_play_query_entity_nbt, bench_write_play_query_entity_nbt, bench_read_play_query_entity_nbt);
+
+    packet_test_cases!(Packet578, PlaySetDifficulty, PlaySetDifficultySpec,
+        test_play_set_difficulty, bench_write_play_set_difficulty, bench_read_play_set_difficulty);
+
+    packet_test_cases!(Packet578, PlayClientChatMessage, PlayClientChatMessageSpec,
+        test_play_client_chat_message, bench_write_play_client_chat_message, bench_read_play_client_chat_message);
+
+    packet_test_cases!(Packet578, PlayClientStatus, PlayClientStatusSpec,
+        test_play_client_status, bench_write_play_client_status, bench_read_play_client_status);
+
+    packet_test_cases!(Packet578, PlayClientSettings, PlayClientSettingsSpec,
+        test_play_client_settings, bench_write_play_client_settings, bench_read_play_client_settings);
+
+    packet_test_cases!(Packet578, PlayClientTabComplete, PlayClientTabCompleteSpec,
+        test_play_client_tab_complete, bench_write_play_client_tab_complete, bench_read_play_client_tab_complete);
+
+    packet_test_cases!(Packet578, PlayClientWindowConfirmation, PlayClientWindowConfirmationSpec,
+        test_play_client_window_confirmation, bench_write_play_client_window_confirmation, bench_read_play_client_window_confirmation);
+
+    packet_test_cases!(Packet578, PlayClickWindowButton, PlayClickWindowButtonSpec,
+        test_play_click_window_button, bench_write_play_click_window_button, bench_read_play_click_window_button);
+
+    packet_test_cases!(Packet578, PlayClickWindow, PlayClickWindowSpec,
+        test_play_click_window, bench_write_play_click_window, bench_read_play_click_window);
+
+    packet_test_cases!(Packet578, PlayClientCloseWindow, PlayClientCloseWindowSpec,
+        test_play_client_close_window, bench_write_play_client_close_window, bench_read_play_client_close_window);
+
+    packet_test_cases!(Packet578, PlayClientPluginMessage, PlayClientPluginMessageSpec,
+        test_play_client_plugin_message, bench_write_play_client_plugin_message, bench_read_play_client_plugin_message);
+
+    packet_test_cases!(Packet578, PlayEditBook, PlayEditBookSpec,
+        test_play_edit_book, bench_write_play_edit_book, bench_read_play_edit_book);
+
+    packet_test_cases!(Packet578, PlayInteractEntity, PlayInteractEntitySpec,
+        test_play_interact_entity, bench_write_play_interact_entity, bench_read_play_interact_entity);
+
+    packet_test_cases!(Packet578, PlayClientKeepAlive, PlayClientKeepAliveSpec,
+        test_play_client_keep_alive, bench_write_play_client_keep_alive, bench_read_play_client_keep_alive);
+
+    packet_test_cases!(Packet578, PlayLockDifficulty, PlayLockDifficultySpec,
+        test_play_lock_difficulty, bench_write_play_lock_difficulty, bench_read_play_lock_difficulty);
+
+    packet_test_cases!(Packet578, PlayPlayerPosition, PlayPlayerPositionSpec,
+        test_play_player_position, bench_write_play_player_position, bench_read_play_player_position);
+
+    packet_test_cases!(Packet578, PlayClientPlayerPositionAndRotation, PlayClientPlayerPositionAndRotationSpec,
+        test_play_client_player_position_and_rotation, bench_write_play_client_player_position_and_rotation, bench_read_play_client_player_position_and_rotation);
+
+    packet_test_cases!(Packet578, PlayPlayerRotation, PlayPlayerRotationSpec,
+        test_play_player_rotation, bench_write_play_player_rotation, bench_read_play_player_rotation);
+
+    packet_test_cases!(Packet578, PlayPlayerMovement, PlayPlayerMovementSpec,
+        test_play_player_movement, bench_write_play_player_movement, bench_read_play_player_movement);
+
+    packet_test_cases!(Packet578, PlayClientVehicleMove, PlayClientVehicleMoveSpec,
+        test_play_client_vehicle_move, bench_write_play_client_vehicle_move, bench_read_play_client_vehicle_move);
+
+    packet_test_cases!(Packet578, PlaySteerBoat, PlaySteerBoatSpec,
+        test_play_steer_boat, bench_write_play_steer_boat, bench_read_play_steer_boat);
+
+    packet_test_cases!(Packet578, PlayPickItem, PlayPickItemSpec,
+        test_play_pick_item, bench_write_play_pick_item, bench_read_play_pick_item);
+
+    packet_test_cases!(Packet578, PlayCraftRecipeRequest, PlayCraftRecipeRequestSpec,
+        test_play_craft_recipe_request, bench_write_play_craft_recipe_request, bench_read_play_craft_recipe_request);
+
+    packet_test_cases!(Packet578, PlayClientPlayerAbilities, PlayClientPlayerAbilitiesSpec,
+        test_play_client_player_abilities, bench_write_play_client_player_abilities, bench_read_play_client_player_abilities);
+
+    packet_test_cases!(Packet578, PlayPlayerDigging, PlayPlayerDiggingSpec,
+        test_play_player_digging, bench_write_play_player_digging, bench_read_play_player_digging);
+
+    packet_test_cases!(Packet578, PlayEntityAction, PlayEntityActionSpec,
+        test_play_entity_action, bench_write_play_entity_action, bench_read_play_entity_action);
+
+    packet_test_cases!(Packet578, PlaySteerVehicle, PlaySteerVehicleSpec,
+        test_play_steer_vehicle, bench_write_play_steer_vehicle, bench_read_play_steer_vehicle);
+
+    packet_test_cases!(Packet578, PlayRecipeBookData, PlayRecipeBookDataSpec,
+        test_play_recipe_book_data, bench_write_play_recipe_book_data, bench_read_play_recipe_book_data);
+
+    packet_test_cases!(Packet578, PlayNameItem, PlayNameItemSpec,
+        test_play_name_item, bench_write_play_name_item, bench_read_play_name_item);
+
+    packet_test_cases!(Packet578, PlayResourcePackStatus, PlayResourcePackStatusSpec,
+        test_play_resource_pack_status, bench_write_play_resource_pack_status, bench_read_play_resource_pack_status);
+
+    packet_test_cases!(Packet578, PlayAdvancementTab, PlayAdvancementTabSpec,
+        test_play_advancement_tab, bench_write_play_advancement_tab, bench_read_play_advancement_tab);
+
+    packet_test_cases!(Packet578, PlaySelectTrade, PlaySelectTradeSpec,
+        test_play_select_trade, bench_write_play_select_trade, bench_read_play_select_trade);
+
+    packet_test_cases!(Packet578, PlaySetBeaconEffect, PlaySetBeaconEffectSpec,
+        test_play_set_beacon_effect, bench_write_play_set_beacon_effect, bench_read_play_set_beacon_effect);
+
+    packet_test_cases!(Packet578, PlayClientHeldItemChange, PlayClientHeldItemChangeSpec,
+        test_play_client_held_item_change, bench_write_play_client_held_item_change, bench_read_play_client_held_item_change);
+
+    packet_test_cases!(Packet578, PlayUpdateCommandBlock, PlayUpdateCommandBlockSpec,
+        test_play_update_command_block, bench_write_play_update_command_block, bench_read_play_update_command_block);
+
+    packet_test_cases!(Packet578, PlayUpdateCommandBlockMinecart, PlayUpdateCommandBlockMinecartSpec,
+        test_play_update_command_block_minecart, bench_write_play_update_command_block_minecart, bench_read_play_update_command_block_minecart);
+
+    packet_test_cases!(Packet578, PlayCreativeInventoryAction, PlayCreativeInventoryActionSpec,
+        test_play_creative_inventory_action, bench_write_play_creative_inventory_action, bench_read_play_creative_inventory_action);
+
+    packet_test_cases!(Packet578, PlayUpdateJigsawBlock, PlayUpdateJigsawBlockSpec,
+        test_play_update_jigsaw_block, bench_write_play_update_jigsaw_block, bench_read_play_update_jigsaw_block);
+
+    packet_test_cases!(Packet578, PlayUpdateStructureBlock, PlayUpdateStructureBlockSpec,
+        test_play_update_structure_block, bench_write_play_update_structure_block, bench_read_play_update_structure_block);
+
+    packet_test_cases!(Packet578, PlayUpdateSign, PlayUpdateSignSpec,
+        test_play_update_sign, bench_write_play_update_sign, bench_read_play_update_sign);
+
+    packet_test_cases!(Packet578, PlayClientAnimation, PlayClientAnimationSpec,
+        test_play_client_animation, bench_write_play_client_animation, bench_read_play_client_animation);
+
+    packet_test_cases!(Packet578, PlaySpectate, PlaySpectateSpec,
+        test_play_spectate, bench_write_play_spectate, bench_read_play_spectate);
+
+    packet_test_cases!(Packet578, PlayBlockPlacement, PlayBlockPlacementSpec,
+        test_play_block_placement, bench_write_play_block_placement, bench_read_play_block_placement);
+
+    packet_test_cases!(Packet578, PlayUseItem, PlayUseItemSpec,
+        test_play_use_item, bench_write_play_use_item, bench_read_play_use_item);
 
     // trust me, this is some cutting edge shit
     // I'm definitely not generating code using a unit test

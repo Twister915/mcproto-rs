@@ -69,28 +69,7 @@ impl<'de> serde::Deserialize<'de> for UUID4 {
 
 impl UUID4 {
     pub fn parse(from: &str) -> Option<UUID4> {
-        const PATTERN: &str = r"^([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})$";
-        // let re = Regex::new(PATTERN).expect("regex is valid");
-        lazy_static! {
-            static ref RE: Regex = Regex::new(PATTERN).expect("regex is valid");
-        }
-
-        RE.captures_iter(from)
-            .filter_map(move |c| {
-                c.get(1).map(move |g| g.as_str()).and_then(move |g0| {
-                    c.get(2).map(move |g| g.as_str()).and_then(move |g1| {
-                        c.get(3).map(move |g| g.as_str()).and_then(move |g2| {
-                            c.get(4).map(move |g| g.as_str()).and_then(move |g3| {
-                                c.get(5).map(move |g4| RawUUID4 {
-                                    parts: [g0, g1, g2, g3, g4.as_str()],
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-            .nth(0)
-            .and_then(move |raw| raw.parse())
+        RawUUID::from_str(from).and_then(move |raw| raw.parse4())
     }
 
     pub fn random() -> Self {
@@ -116,12 +95,36 @@ impl UUID4 {
     }
 }
 
-struct RawUUID4<'a> {
+struct RawUUID<'a> {
     parts: [&'a str; 5],
 }
 
-impl<'a> RawUUID4<'a> {
-    fn parse(self) -> Option<UUID4> {
+impl<'a> RawUUID<'a> {
+    fn from_str(from: &'a str) -> Option<RawUUID<'a>> {
+        const PATTERN: &str = r"^([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})$";
+        // let re = Regex::new(PATTERN).expect("regex is valid");
+        lazy_static! {
+            static ref RE: Regex = Regex::new(PATTERN).expect("regex is valid");
+        }
+
+        RE.captures_iter(from)
+            .filter_map(move |c| {
+                c.get(1).map(move |g| g.as_str()).and_then(move |g0| {
+                    c.get(2).map(move |g| g.as_str()).and_then(move |g1| {
+                        c.get(3).map(move |g| g.as_str()).and_then(move |g2| {
+                            c.get(4).map(move |g| g.as_str()).and_then(move |g3| {
+                                c.get(5).map(move |g4| RawUUID {
+                                    parts: [g0, g1, g2, g3, g4.as_str()],
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+            .nth(0)
+    }
+
+    fn parse4(self) -> Option<UUID4> {
         let mut bit_index: usize = 0;
         let mut raw: u128 = 0;
 
@@ -138,7 +141,26 @@ impl<'a> RawUUID4<'a> {
 
         Some(UUID4 { raw })
     }
+    //
+    // fn parse3(self) -> Option<UUID3> {
+    //     self.parse4().map(move |id| UUID3 { raw: id.raw })
+    // }
 }
+
+// #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
+// pub struct UUID3 {
+//     raw: u128,
+// }
+//
+// impl UUID3 {
+//     pub fn parse(from: &str) -> Option<UUID3> {
+//         RawUUID::from_str(from).and_then(move |id| id.parse3())
+//     }
+//
+//     pub fn from(namespace: UUID4, data: &str) -> UUID3 {
+//         namespace.raw
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
