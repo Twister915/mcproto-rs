@@ -2,7 +2,7 @@ use crate::utils::{
     read_int, read_long, read_one_byte, read_short, take, write_int, write_long, write_short,
 };
 use crate::{DeserializeErr, DeserializeResult, Deserialized};
-use alloc::{string::{String, ToString}, borrow::ToOwned, fmt, vec::Vec};
+use alloc::{string::{String, ToString}, borrow::ToOwned, fmt, vec::Vec, vec, format};
 
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
@@ -518,7 +518,7 @@ impl Tag {
 }
 
 // test
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use flate2::read::GzDecoder;

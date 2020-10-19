@@ -1,4 +1,4 @@
-use alloc::{string::String, fmt};
+use alloc::{string::String, fmt, vec};
 
 pub enum SerializeErr {
     FailedJsonEncode(String),
@@ -21,6 +21,7 @@ impl fmt::Debug for SerializeErr {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for SerializeErr {}
 
 pub type SerializeResult = Result<(), SerializeErr>;

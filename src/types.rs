@@ -1,6 +1,6 @@
 // ... PRIMITIVE TYPES ...
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec::Vec, fmt};
 use crate::utils::*;
 use crate::uuid::UUID4;
 use crate::*;
@@ -251,8 +251,8 @@ impl From<usize> for VarInt {
     }
 }
 
-impl std::fmt::Display for VarInt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for VarInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "VarInt({})", self.0)
     }
 }
@@ -739,7 +739,7 @@ impl TestRandom for Slot {
     }
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloc::fmt::Debug;
@@ -905,6 +905,7 @@ mod tests {
         });
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_uuid() {
         for _ in 0..5 {

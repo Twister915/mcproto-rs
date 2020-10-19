@@ -1843,7 +1843,7 @@ impl Deserialize for GameChangeReason {
             0x09 => Deserialized::ok(PufferfishSting, data),
             0x0A => Deserialized::ok(ElderGuardianMobAppearance, data),
             0x0B => Ok(RespawnRequestType::deserialize_with_id(value as u8, data)?.map(move |mode| Respawn(mode))),
-            other => Err(DeserializeErr::CannotUnderstandValue(format!(
+            other => Err(DeserializeErr::CannotUnderstandValue(alloc::format!(
                 "invalid game change reason id {}",
                 other
             ))),
@@ -2800,7 +2800,7 @@ impl LightingData {
             if update_mask.0 & (1 << i) != 0 {
                 let Deserialized { value: length, data: rest } = VarInt::mc_deserialize(data)?;
                 if (length.0 as usize) != LIGHT_DATA_LENGTH {
-                    return Err(DeserializeErr::CannotUnderstandValue(format!("bad data length in light update {}", length)));
+                    return Err(DeserializeErr::CannotUnderstandValue(alloc::format!("bad data length in light update {}", length)));
                 }
 
                 data = rest;
@@ -3419,7 +3419,7 @@ pub mod tests {
     fn test_generate_test_cases() {
         Packet578::describe().packets.iter().map(move |packet| {
             let snake_case = to_snake_case(packet.name.clone());
-            format!("packet_test_cases!(Packet578, {}, {},\n        test_{}, bench_write_{}, bench_read_{});\n",
+            alloc::format!("packet_test_cases!(Packet578, {}, {},\n        test_{}, bench_write_{}, bench_read_{});\n",
                     packet.name, packet.body_struct, snake_case, snake_case, snake_case).to_owned()
         }).for_each(move |line| {
             println!("{}", line)

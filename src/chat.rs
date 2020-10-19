@@ -1,4 +1,4 @@
-use alloc::{vec::Vec, string::{String, ToString}, fmt, collections::{BTreeMap}, boxed::Box, borrow::ToOwned};
+use alloc::{vec::Vec, string::{String, ToString}, collections::{BTreeMap}, boxed::Box, borrow::ToOwned, fmt, format};
 use serde::{Serialize, Deserialize, Deserializer, de, Serializer};
 use serde::de::{Visitor, Error, IntoDeserializer, MapAccess};
 use serde::ser::SerializeMap;
@@ -1040,7 +1040,7 @@ impl TestRandom for Chat {
     }
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 pub mod tests {
 
     use super::*;

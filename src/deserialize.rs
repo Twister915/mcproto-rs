@@ -53,6 +53,7 @@ impl fmt::Debug for DeserializeErr {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for DeserializeErr {}
 
 impl<'b, R> Into<DeserializeResult<'b, R>> for DeserializeErr {

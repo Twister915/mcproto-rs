@@ -61,6 +61,7 @@ impl fmt::Debug for PacketErr {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for PacketErr {}
 
 #[derive(Debug, Clone, PartialEq)]
@@ -243,14 +244,14 @@ macro_rules! define_protocol {
             pub fn describe() -> crate::protocol::ProtocolSpec {
                 crate::protocol::ProtocolSpec {
                     name: stringify!($packett).to_owned(),
-                    packets: vec!(
+                    packets: alloc::vec!(
                         $(crate::protocol::ProtocolPacketSpec{
                             state: stringify!($state).to_owned(),
                             direction: stringify!($direction).to_owned(),
                             id: $id,
                             name: stringify!($nam).to_owned(),
                             body_struct: stringify!($body).to_owned(),
-                            fields: vec!(
+                            fields: alloc::vec!(
                                 $(crate::protocol::ProtocolPacketField{
                                     name: stringify!($fnam).to_owned(),
                                     kind: stringify!($ftyp).to_owned(),
@@ -262,6 +263,7 @@ macro_rules! define_protocol {
             }
         }
 
+        #[cfg(feature = "std")]
         impl<'a> std::convert::TryFrom<crate::protocol::RawPacket<'a, $idi>> for $rawpackett<'a> {
             type Error = crate::protocol::PacketErr;
 
@@ -270,19 +272,30 @@ macro_rules! define_protocol {
                 use self::$statet::*;
                 use self::$directiont::*;
                 use crate::protocol::PacketErr::*;
+                #[cfg(feature = "std")]
+                use std::marker;
+                #[cfg(not(feature = "std"))]
+                use no_std_compat::marker;
 
                 match (value.id.id, value.id.state, value.id.direction) {
                     $(($id, $state, $direction) => Ok($nam($rawdt {
                         data: value.data,
-                        _typ: std::marker::PhantomData,
+                        _typ: marker::PhantomData,
                     }))),*,
                     other => Err(UnknownId(other.0))
                 }
             }
         }
 
+        #[cfg(feature = "std")]
         impl<'a> std::convert::Into<crate::protocol::RawPacket<'a, $idi>> for $rawpackett<'a> {
             fn into(self) -> crate::protocol::RawPacket<'a, $idi> {
+                self.into_raw_packet()
+            }
+        }
+
+        impl<'a> $rawpackett<'a> {
+            fn into_raw_packet(self) -> crate::protocol::RawPacket<'a, $idi> {
                 crate::protocol::RawPacket {
                     id: self.id(),
                     data: self.bytes(),
@@ -290,6 +303,7 @@ macro_rules! define_protocol {
             }
         }
 
+        #[cfg(feature = "std")]
         impl<'a> std::convert::Into<&'a [u8]> for $rawpackett<'a> {
             fn into(self) -> &'a [u8] {
                 use self::$rawpackett::*;
@@ -313,7 +327,7 @@ macro_rules! define_protocol {
 
             pub fn deserialize(self) -> Result<$packett, crate::protocol::PacketErr> {
                 use crate::protocol::Packet;
-                $packett::mc_deserialize(self.into())
+                $packett::mc_deserialize(self.into_raw_packet())
             }
 
             pub fn bytes(&self) -> &'a [u8] {
@@ -325,10 +339,18 @@ macro_rules! define_protocol {
             }
         }
 
+        #[cfg(feature = "std")]
         #[derive(PartialEq, Debug)]
         pub struct $rawdt<'a, T> {
             pub data: &'a [u8],
             _typ: std::marker::PhantomData<T>
+        }
+
+        #[cfg(not(feature = "std"))]
+        #[derive(PartialEq, Debug)]
+        pub struct $rawdt<'a, T> {
+            pub data: &'a [u8],
+            _typ: no_std_compat::marker::PhantomData<T>
         }
 
         impl<'a, T> $rawdt<'a, T> where T: crate::Deserialize {
@@ -405,7 +427,7 @@ macro_rules! proto_enum_with_type {
                 match id.into() {
                     $($bval => proto_enum_deserialize_variant!(data, $typname::$nam $(($bod))?)),*,
                     other => {
-                        return Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} {:?}", stringify!($typname), other)))
+                        return Err(DeserializeErr::CannotUnderstandValue(alloc::format!("invalid {} {:?}", stringify!($typname), other)))
                     }
                 }
             }
@@ -510,7 +532,7 @@ macro_rules! proto_str_enum {
             pub fn deserialize_with_id<'a>(name: &str, data: &'a[u8]) -> DeserializeResult<'a, Self> {
                 match name {
                     $($sval => proto_enum_deserialize_variant!(data, $typname::$nam $(($bod))?)),*,
-                    other => Err(DeserializeErr::CannotUnderstandValue(format!("invalid {} ident '{}'", stringify!($typname), other)))
+                    other => Err(DeserializeErr::CannotUnderstandValue(alloc::format!("invalid {} ident '{}'", stringify!($typname), other)))
                 }
             }
 
@@ -689,7 +711,7 @@ macro_rules! counted_array_type {
             T: Debug + Clone + PartialEq,
         {
             type Item = &'a mut T;
-            type IntoIter = std::slice::IterMut<'a, T>;
+            type IntoIter = alloc::slice::IterMut<'a, T>;
 
             fn into_iter(self) -> Self::IntoIter {
                 let data = &mut self.data;
@@ -702,7 +724,7 @@ macro_rules! counted_array_type {
             T: Debug + Clone + PartialEq,
         {
             type Item = &'a T;
-            type IntoIter = std::slice::Iter<'a, T>;
+            type IntoIter = alloc::slice::Iter<'a, T>;
 
             fn into_iter(self) -> Self::IntoIter {
                 let data = &self.data;
@@ -715,7 +737,7 @@ macro_rules! counted_array_type {
             T: Debug + Clone + PartialEq,
         {
             type Item = T;
-            type IntoIter = std::vec::IntoIter<T>;
+            type IntoIter = alloc::vec::IntoIter<T>;
 
             fn into_iter(self) -> Self::IntoIter {
                 self.data.into_iter()

@@ -74,6 +74,7 @@ version = "0.2.0"
 dependencies = [
  "base64",
  "flate2",
+ "no-std-compat",
  "paste",
  "rand",
  "serde",
@@ -89,6 +90,12 @@ dependencies = [
  "adler",
  "autocfg",
 ]
+
+[[package]]
+name = "no-std-compat"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b93853da6d84c2e3c7d730d6473e8817692dd89be387eb01b94d7f108ecb5b8c"
 
 [[package]]
 name = "paste"

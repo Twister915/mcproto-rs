@@ -46,7 +46,7 @@ impl<'de> serde::Deserialize<'de> for UUID4 {
         impl serde::de::Visitor<'_> for Visitor {
             type Value = UUID4;
 
-            fn expecting(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+            fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
                 write!(formatter, "a string representing the UUID")
             }
 
@@ -185,11 +185,13 @@ fn str_split(source: &str, n: usize) -> Option<(&str, &str)> {
     }
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::UUID4;
+    #[cfg(feature = "std")]
     use alloc::string::ToString;
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_random_uuid4() {
         UUID4::random();
@@ -218,6 +220,7 @@ mod tests {
         assert_eq!(uuid_a, uuid_b);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_random_uuid4_hex() {
         let src_uuid = UUID4::random();
@@ -229,16 +232,19 @@ mod tests {
         assert_eq!(uuid_hex, uuid_parsed_hex);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_display_uuid() {
         println!("got uuid {}", UUID4::random());
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_debug_uuid() {
         println!("got uuid {:?}", UUID4::random());
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_to_json() {
         let id = UUID4::random();
@@ -246,6 +252,7 @@ mod tests {
         assert_eq!(str, format!("\"{}\"", id.to_string()))
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_from_json() {
         let id = UUID4::random();
@@ -254,6 +261,7 @@ mod tests {
         assert_eq!(deserialized, id);
     }
 
+    #[cfg(feature = "std")]
     #[bench]
     fn bench_parse_uuid4(b: &mut test::Bencher) {
         let rand = UUID4::random();
@@ -264,6 +272,7 @@ mod tests {
         })
     }
 
+    #[cfg(feature = "std")]
     #[bench]
     fn bench_uuid4_to_str(b: &mut test::Bencher) {
         let rand = UUID4::random();

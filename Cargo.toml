@@ -17,6 +17,9 @@ version = "1.0.116"
 features = [ "derive", "alloc" ]
 default-features = false
 
+[target.'cfg(not(feature = "std"))'.dependencies]
+no-std-compat = "0.4.1"
+
 [dev-dependencies]
 flate2 = "1.0.17"
 

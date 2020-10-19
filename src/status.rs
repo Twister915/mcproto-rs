@@ -5,7 +5,8 @@ use crate::{
     SerializeErr, SerializeResult,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use alloc::{string::String, fmt, vec::Vec};
+use alloc::{string::String, fmt, vec::Vec, borrow::ToOwned};
+use alloc::format;
 
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
@@ -94,7 +95,7 @@ impl Serialize for StatusFaviconSpec {
         S: Serializer,
     {
         let data_base64 = base64::encode(self.data.as_slice());
-        let content = format!("data:{};base64,{}", self.content_type, data_base64);
+        let content = alloc::format!("data:{};base64,{}", self.content_type, data_base64);
         serializer.serialize_str(content.as_str())
     }
 }
