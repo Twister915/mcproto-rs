@@ -57,7 +57,6 @@ impl fmt::Debug for DeserializeErr {
 impl std::error::Error for DeserializeErr {}
 
 impl<'b, R> Into<DeserializeResult<'b, R>> for DeserializeErr {
-    #[inline]
     fn into(self) -> DeserializeResult<'b, R> {
         Err(self)
     }
@@ -69,24 +68,20 @@ pub struct Deserialized<'b, R> {
 }
 
 impl<'b, R> Into<DeserializeResult<'b, R>> for Deserialized<'b, R> {
-    #[inline]
     fn into(self) -> DeserializeResult<'b, R> {
         Ok(self)
     }
 }
 
 impl<'b, R> Deserialized<'b, R> {
-    #[inline]
     pub fn create(value: R, data: &'b [u8]) -> Self {
         Deserialized { value, data }
     }
 
-    #[inline]
     pub fn ok(value: R, rest: &'b [u8]) -> DeserializeResult<'b, R> {
         Self::create(value, rest).into()
     }
 
-    #[inline]
     pub fn replace<T>(self, other: T) -> Deserialized<'b, T> {
         Deserialized {
             value: other,
@@ -94,7 +89,6 @@ impl<'b, R> Deserialized<'b, R> {
         }
     }
 
-    #[inline]
     pub fn map<F, T>(self, f: F) -> Deserialized<'b, T>
     where
         F: FnOnce(R) -> T,
@@ -105,7 +99,6 @@ impl<'b, R> Deserialized<'b, R> {
         }
     }
 
-    #[inline]
     pub fn try_map<F, T>(self, f: F) -> DeserializeResult<'b, T>
     where
         F: FnOnce(R) -> Result<T, DeserializeErr>,
@@ -119,7 +112,6 @@ impl<'b, R> Deserialized<'b, R> {
         }
     }
 
-    #[inline]
     pub fn and_then<F, T>(self, f: F) -> DeserializeResult<'b, T>
     where
         F: FnOnce(R, &'b [u8]) -> DeserializeResult<'b, T>,

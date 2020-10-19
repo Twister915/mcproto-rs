@@ -169,7 +169,6 @@ impl TestRandom for Tag {
     }
 }
 
-#[inline]
 fn write_contents<F>(contents: &Vec<F>) -> String
     where
         F: fmt::Display,
@@ -205,7 +204,6 @@ fn read_nbt_data(data: &[u8]) -> DeserializeResult<NamedTag> {
 }
 
 // reads any named tag: read id -> read name -> read tag with id -> name tag with name
-#[inline]
 pub fn read_named_tag(data: &[u8]) -> DeserializeResult<NamedTag> {
     let Deserialized {
         value: tag_type_id,
@@ -221,7 +219,6 @@ pub fn read_named_tag(data: &[u8]) -> DeserializeResult<NamedTag> {
 }
 
 // reads any tag (given it's id)
-#[inline]
 pub fn read_tag(tag_type_id: u8, data: &[u8]) -> DeserializeResult<Tag> {
     match tag_type_id {
         0x00 => Deserialized::ok(Tag::End, data),
@@ -241,44 +238,36 @@ pub fn read_tag(tag_type_id: u8, data: &[u8]) -> DeserializeResult<Tag> {
     }
 }
 
-#[inline]
 fn read_tag_byte(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_one_byte(data)?.map(move |byte| Tag::Byte(byte as i8)))
 }
 
-#[inline]
 fn read_tag_short(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_short(data)?.map(move |i| Tag::Short(i as i16)))
 }
 
-#[inline]
 fn read_tag_int(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_int(data)?.map(move |i| Tag::Int(i as i32)))
 }
 
-#[inline]
 fn read_tag_long(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_long(data)?.map(move |i| Tag::Long(i as i64)))
 }
 
-#[inline]
 fn read_tag_float(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_int(data)?.map(move |i| Tag::Float(f32::from_bits(i as u32))))
 }
 
-#[inline]
 fn read_tag_double(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_long(data)?.map(move |i| Tag::Double(f64::from_bits(i as u64))))
 }
 
-#[inline]
 fn read_tag_byte_array(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_int(data)?
         .and_then(move |size, rest| take(size as usize)(rest))?
         .map(move |arr| Tag::ByteArray(Vec::from(arr))))
 }
 
-#[inline]
 fn read_tag_string(data: &[u8]) -> DeserializeResult<Tag> {
     Ok(read_string(data)?.map(move |str| Tag::String(str)))
 }
@@ -322,7 +311,6 @@ fn read_tag_compound(data: &[u8]) -> DeserializeResult<Tag> {
     Deserialized::ok(Tag::Compound(out), remaining_data)
 }
 
-#[inline]
 fn read_tag_int_array(data: &[u8]) -> DeserializeResult<Tag> {
     read_array_tag(
         data,
@@ -331,7 +319,6 @@ fn read_tag_int_array(data: &[u8]) -> DeserializeResult<Tag> {
     )
 }
 
-#[inline]
 fn read_tag_long_array(data: &[u8]) -> DeserializeResult<Tag> {
     read_array_tag(
         data,
@@ -340,7 +327,6 @@ fn read_tag_long_array(data: &[u8]) -> DeserializeResult<Tag> {
     )
 }
 
-#[inline]
 fn read_array_tag<'a, R, F, M>(
     data: &'a [u8],
     parser: F,
@@ -369,7 +355,6 @@ fn read_array_tag<'a, R, F, M>(
     }
 }
 
-#[inline]
 fn read_string(data: &[u8]) -> DeserializeResult<String> {
     read_short(data)?
         .and_then(move |length, data| take(length as usize)(data))?

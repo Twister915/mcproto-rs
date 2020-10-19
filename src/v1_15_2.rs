@@ -821,12 +821,10 @@ proto_byte_enum!(HandshakeNextState,
     0x02 :: Login
 );
 
-#[inline]
 fn varint_to_usize(v: VarInt) -> usize {
     v.into()
 }
 
-#[inline]
 fn varint_from_usize(u: usize) -> VarInt {
     u.into()
 }
@@ -837,34 +835,28 @@ counted_array_type!(
     varint_from_usize
 );
 
-#[inline]
 fn i16_to_usize(v: i16) -> usize {
     v as usize
 }
 
-#[inline]
 fn i16_from_usize(u: usize) -> i16 {
     u as i16
 }
 counted_array_type!(ShortCountedArray, i16, i16_to_usize, i16_from_usize);
 
-#[inline]
 fn i32_to_usize(v: i32) -> usize {
     v as usize
 }
 
-#[inline]
 fn i32_from_usize(u: usize) -> i32 {
     u as i32
 }
 counted_array_type!(IntCountedArray, i32, i32_to_usize, i32_from_usize);
 
-#[inline]
 fn i8_to_usize(v: i8) -> usize {
     v as usize
 }
 
-#[inline]
 fn i8_from_usize(u: usize) -> i8 {
     u as i8
 }

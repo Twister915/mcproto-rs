@@ -1,7 +1,6 @@
 use crate::{DeserializeErr, DeserializeResult, Deserialized};
 use alloc::string::String;
 
-#[inline]
 pub fn read_one_byte(data: &[u8]) -> DeserializeResult<u8> {
     match data.split_first() {
         Some((byte, rest)) => Deserialized::ok(*byte, rest),
@@ -9,7 +8,6 @@ pub fn read_one_byte(data: &[u8]) -> DeserializeResult<u8> {
     }
 }
 
-#[inline]
 pub fn take(amount: usize) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b, &'b [u8]> {
     move |data| {
         if data.len() < amount {
@@ -20,7 +18,6 @@ pub fn take(amount: usize) -> impl for<'b> Fn(&'b [u8]) -> DeserializeResult<'b,
     }
 }
 
-#[inline]
 pub fn read_long(data: &[u8]) -> DeserializeResult<u64> {
     Ok(take(8)(data)?.map(move |bytes| {
         (bytes[0] as u64) << 56
@@ -34,7 +31,6 @@ pub fn read_long(data: &[u8]) -> DeserializeResult<u64> {
     }))
 }
 
-#[inline]
 pub fn write_long(v: u64) -> [u8; 8] {
     [
         (v >> 56) as u8,
@@ -48,7 +44,6 @@ pub fn write_long(v: u64) -> [u8; 8] {
     ]
 }
 
-#[inline]
 pub fn read_int(data: &[u8]) -> DeserializeResult<u32> {
     Ok(take(4)(data)?.map(move |bytes| {
         (bytes[0] as u32) << 24
@@ -58,22 +53,18 @@ pub fn read_int(data: &[u8]) -> DeserializeResult<u32> {
     }))
 }
 
-#[inline]
 pub fn write_int(v: u32) -> [u8; 4] {
     [(v >> 24) as u8, (v >> 16) as u8, (v >> 8) as u8, v as u8]
 }
 
-#[inline]
 pub fn read_short(data: &[u8]) -> DeserializeResult<u16> {
     Ok(take(2)(data)?.map(move |bytes| (bytes[0] as u16) << 8 | (bytes[1] as u16)))
 }
 
-#[inline]
 pub fn write_short(v: u16) -> [u8; 2] {
     [(v >> 8) as u8, v as u8]
 }
 
-#[inline]
 pub fn hex(data: &[u8]) -> String {
     let mut str = String::with_capacity(data.len() * 2);
     for byte_ref in data {
@@ -87,7 +78,6 @@ pub fn hex(data: &[u8]) -> String {
 const ZERO_ASCII_CODE: u8 = 48;
 const LOWER_A_ASCII_CODE: u8 = 97;
 
-#[inline]
 fn hex_char_for(half: u8) -> char {
     if half > 0xF {
         panic!("not defined for > 0xF (operates on half a byte)");
@@ -100,7 +90,6 @@ fn hex_char_for(half: u8) -> char {
     }
 }
 
-#[inline]
 pub fn parse_hex_char(data: u8) -> Option<u8> {
     const UPPER_A_ASCII_CODE: u8 = 65;
     const LOWER_F_ASCII_CODE: u8 = 102;
