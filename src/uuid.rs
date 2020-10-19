@@ -101,19 +101,30 @@ struct RawUUID<'a> {
 
 impl<'a> RawUUID<'a> {
     fn from_str(from: &'a str) -> Option<RawUUID<'a>> {
+        const DASH: &'static str = "-";
         // 8-4-4-4-12
-        let (s0, from) = str_split(from, 8)?;
+        // with or without dashes but must be consistent
+        let (s0, mut from) = str_split(from, 8)?;
         str_check_hex(s0)?;
-        let from = str_tag(from, "-")?;
+        let (from1, has_dash) = str_tag_optional(from, DASH);
+        from = from1;
+        let consume_dash_f = if has_dash {
+            |str: &'a str| str_tag(str, DASH)
+        } else {
+            |str: &'a str| {
+                Some(str)
+            }
+        };
+
         let (s1, from) = str_split(from, 4)?;
         str_check_hex(s1)?;
-        let from = str_tag(from, "-")?;
+        let from = consume_dash_f(from)?;
         let (s2, from) = str_split(from, 4)?;
         str_check_hex(s2)?;
-        let from = str_tag(from, "-")?;
+        let from = consume_dash_f(from)?;
         let (s3, from) = str_split(from, 4)?;
         str_check_hex(s3)?;
-        let from = str_tag(from, "-")?;
+        let from = consume_dash_f(from)?;
         let (s4, from) = str_split(from, 12)?;
         str_check_hex(s4)?;
         str_check_eof(from)?;
@@ -149,6 +160,12 @@ fn str_tag<'a>(source: &'a str, tag: &str) -> Option<&'a str> {
     } else {
         Some(back)
     }
+}
+
+fn str_tag_optional<'a>(source: &'a str, tag: &str) -> (&'a str, bool) {
+    str_tag(source, tag)
+        .map(move |v| (v, true))
+        .unwrap_or_else(|| (source, false))
 }
 
 fn str_check_eof(source: &str) -> Option<()> {
@@ -202,6 +219,13 @@ mod tests {
     #[test]
     fn test_uuid4_parse() {
         UUID4::parse(VALID_UUID).expect("should parse valid uuid correctly");
+    }
+
+    const VALID_UUID_NO_DASHES: &str = "e1cde35a075847f6adf89dcb44884e5d";
+
+    #[test]
+    fn test_uuid4_parse_nodash() {
+        UUID4::parse(VALID_UUID_NO_DASHES).expect("should parse valid uuid with no dashes correctly");
     }
 
     #[test]
