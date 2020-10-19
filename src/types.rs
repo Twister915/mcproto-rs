@@ -845,7 +845,7 @@ mod tests {
     #[test]
     fn test_nbt() {
         test_type(NamedNbtTag {
-            root: nbt::Tag::Compound(vec![
+            root: nbt::Tag::Compound(alloc::vec![
                 nbt::Tag::String("test 123".to_owned()).with_name("abc 123")
             ])
             .with_name("root"),

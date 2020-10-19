@@ -350,7 +350,7 @@ macro_rules! define_protocol {
         #[derive(PartialEq, Debug)]
         pub struct $rawdt<'a, T> {
             pub data: &'a [u8],
-            _typ: no_std_compat::marker::PhantomData<T>
+            _typ: core::marker::PhantomData<T>
         }
 
         impl<'a, T> $rawdt<'a, T> where T: crate::Deserialize {

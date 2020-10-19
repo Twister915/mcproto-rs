@@ -521,10 +521,8 @@ impl Tag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use flate2::read::GzDecoder;
-    use std::fs::File;
-    use std::io::Read;
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_read_bignbt_example() {
         let actual = read_bigtest();
@@ -570,6 +568,7 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_serialize_bigtest() {
         let (unzipped, result) = read_bigtest_with_bytes();
@@ -625,16 +624,19 @@ mod tests {
         assert_eq!(original, unserialized);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_display() {
         println!("{}", read_bigtest());
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_debug() {
         println!("{:?}", read_bigtest());
     }
 
+    #[cfg(feature = "std")]
     fn read_bigtest_with_bytes() -> (Vec<u8>, NamedTag) {
         let unzipped = read_compressed_file("src/testdata/bigtest.nbt").expect("read nbt data");
         let Deserialized {
@@ -646,11 +648,13 @@ mod tests {
         (unzipped, result)
     }
 
+    #[cfg(feature = "std")]
     fn read_bigtest() -> NamedTag {
         let (_, result) = read_bigtest_with_bytes();
         result
     }
 
+    #[cfg(feature = "std")]
     fn bigtest_generate_byte_array() -> Vec<u8> {
         const COUNT: usize = 1000;
         let mut out = Vec::with_capacity(COUNT);
@@ -660,7 +664,12 @@ mod tests {
         out
     }
 
+    #[cfg(feature = "std")]
     fn read_compressed_file(at: &str) -> std::io::Result<Vec<u8>> {
+        use flate2::read::GzDecoder;
+        use std::fs::File;
+        use std::io::Read;
+
         let file = File::open(at)?;
         let mut gz = GzDecoder::new(file);
         let mut out = Vec::new();

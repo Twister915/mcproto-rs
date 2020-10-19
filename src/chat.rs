@@ -1052,7 +1052,7 @@ pub mod tests {
             text: String::default(),
             base: {
                 let mut b = BaseComponent::default();
-                b.extra = vec!(
+                b.extra = alloc::vec!(
                     Chat::Text(TextComponent{
                         text: "this is red, and ".to_owned(),
                         base: {
@@ -1081,6 +1081,7 @@ pub mod tests {
 
         let traditional = out.to_traditional().expect("is text");
         assert_eq!(traditional.as_str(), "§cthis is red, and §rthis is §e§lyellow");
+        #[cfg(feature="std")]
         println!("{}", serde_json::to_string_pretty(&out).expect("should serialize fine"));
     }
 }
