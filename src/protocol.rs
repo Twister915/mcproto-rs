@@ -339,14 +339,6 @@ macro_rules! define_protocol {
             }
         }
 
-        #[cfg(feature = "std")]
-        #[derive(PartialEq, Debug)]
-        pub struct $rawdt<'a, T> {
-            pub data: &'a [u8],
-            _typ: std::marker::PhantomData<T>
-        }
-
-        #[cfg(not(feature = "std"))]
         #[derive(PartialEq, Debug)]
         pub struct $rawdt<'a, T> {
             pub data: &'a [u8],
