@@ -171,8 +171,8 @@ impl TestRandom for Tag {
 
 #[inline]
 fn write_contents<F>(contents: &Vec<F>) -> String
-where
-    F: fmt::Display,
+    where
+        F: fmt::Display,
 {
     format!(
         "{} entries\n{{\n{}\n}}",
@@ -284,20 +284,10 @@ fn read_tag_string(data: &[u8]) -> DeserializeResult<Tag> {
 }
 
 fn read_tag_list(data: &[u8]) -> DeserializeResult<Tag> {
-    let Deserialized {
-        value: contents_tag_type_id,
-        data,
-    } = read_one_byte(data)?;
-    let Deserialized {
-        value: list_length,
-        data,
-    } = read_int(data)?;
-    if list_length <= 0 {
-        if contents_tag_type_id != 0x00 {
-            Err(DeserializeErr::NbtBadLength(list_length as isize))
-        } else {
-            Deserialized::ok(Tag::List(vec![]), data)
-        }
+    let Deserialized { value: contents_tag_type_id, data } = read_one_byte(data)?;
+    let Deserialized { value: list_length, data } = read_int(data)?;
+    if list_length == 0 {
+        Deserialized::ok(Tag::List(vec![]), data)
     } else {
         let mut out_vec = Vec::with_capacity(list_length as usize);
         let mut remaining_data = data;
@@ -356,9 +346,9 @@ fn read_array_tag<'a, R, F, M>(
     parser: F,
     finalizer: M,
 ) -> DeserializeResult<'a, Tag>
-where
-    F: Fn(&'a [u8]) -> DeserializeResult<'a, R>,
-    M: Fn(Vec<R>) -> Tag,
+    where
+        F: Fn(&'a [u8]) -> DeserializeResult<'a, R>,
+        M: Fn(Vec<R>) -> Tag,
 {
     let Deserialized { value: count, data } = read_int(data)?.map(move |v| v as i32);
     if count < 0 {
@@ -587,8 +577,8 @@ mod tests {
         let original = Tag::Compound(vec![Tag::IntArray(vec![
             1, 2, -5, 123127, -12373, 0, 0, 4, 2,
         ])
-        .with_name("test ints")])
-        .with_name("test");
+            .with_name("test ints")])
+            .with_name("test");
 
         let bytes = original.bytes();
         let Deserialized {
@@ -612,8 +602,8 @@ mod tests {
             4,
             2,
         ])
-        .with_name("test ints")])
-        .with_name("test");
+            .with_name("test ints")])
+            .with_name("test");
 
         let bytes = original.bytes();
         let Deserialized {
