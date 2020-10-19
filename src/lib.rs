@@ -1,9 +1,9 @@
-#![feature(test)]
+#![cfg_attr(feature = "bench", feature(test))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(all(test, feature = "std", feature = "bench"))]
 extern crate test;
 
 mod deserialize;

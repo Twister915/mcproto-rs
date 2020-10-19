@@ -261,7 +261,7 @@ mod tests {
         assert_eq!(deserialized, id);
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "bench"))]
     #[bench]
     fn bench_parse_uuid4(b: &mut test::Bencher) {
         let rand = UUID4::random();
@@ -272,7 +272,7 @@ mod tests {
         })
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "bench"))]
     #[bench]
     fn bench_uuid4_to_str(b: &mut test::Bencher) {
         let rand = UUID4::random();

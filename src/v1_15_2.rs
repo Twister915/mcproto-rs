@@ -2953,9 +2953,9 @@ pub mod tests {
     use super::*;
     use crate::packet_test_cases;
     use crate::protocol::{Packet, RawPacket};
+    #[cfg(feature = "bench")]
     use crate::test_macros::BenchSerializer;
     use crate::types::BytesSerializer;
-    use test::Bencher;
 
     packet_test_cases!(Packet578, Handshake, HandshakeSpec,
         test_handshake, bench_write_handshake, bench_read_handshake);

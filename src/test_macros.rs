@@ -1,6 +1,3 @@
-use crate::{SerializeResult, Serializer};
-use alloc::vec::Vec;
-
 #[cfg(all(test, feature = "std"))]
 #[macro_export]
 macro_rules! packet_test_cases {
@@ -33,8 +30,9 @@ macro_rules! packet_test_cases {
             }
         }
 
+        #[cfg(feature = "bench")]
         #[bench]
-        fn $benchnams(b: &mut Bencher) {
+        fn $benchnams(b: &mut test::Bencher) {
             let packet = $pnam::$varnam($bodnam::test_gen_random());
             let mut serializer = BenchSerializer::default();
             packet
@@ -51,8 +49,9 @@ macro_rules! packet_test_cases {
             })
         }
 
+        #[cfg(feature = "bench")]
         #[bench]
-        fn $benchnamd(b: &mut Bencher) {
+        fn $benchnamd(b: &mut test::Bencher) {
             let packet = $pnam::$varnam($bodnam::test_gen_random());
             let mut serializer = BytesSerializer::default();
             packet
@@ -72,21 +71,21 @@ macro_rules! packet_test_cases {
     };
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(all(test, feature = "std", feature = "bench"))]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct BenchSerializer {
-    data: Vec<u8>,
+    data: alloc::vec::Vec<u8>,
 }
 
-#[cfg(all(test, feature = "std"))]
-impl Serializer for BenchSerializer {
-    fn serialize_bytes(&mut self, data: &[u8]) -> SerializeResult {
+#[cfg(all(test, feature = "std", feature = "bench"))]
+impl crate::Serializer for BenchSerializer {
+    fn serialize_bytes(&mut self, data: &[u8]) -> crate::SerializeResult {
         self.data.extend_from_slice(data);
         Ok(())
     }
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(all(test, feature = "std", feature = "bench"))]
 impl BenchSerializer {
     pub fn reset(&mut self) {
         self.data.clear();
