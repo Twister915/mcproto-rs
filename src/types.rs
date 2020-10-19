@@ -1,12 +1,13 @@
 // ... PRIMITIVE TYPES ...
 
+use alloc::{string::String, vec::Vec};
 use crate::utils::*;
 use crate::uuid::UUID4;
 use crate::*;
 
 pub use super::chat::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 
 // bool
@@ -26,7 +27,7 @@ impl Deserialize for bool {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for bool {
     fn test_gen_random() -> Self {
         rand::random()
@@ -46,7 +47,7 @@ impl Deserialize for u8 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for u8 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -66,7 +67,7 @@ impl Deserialize for i8 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for i8 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -87,7 +88,7 @@ impl Deserialize for u16 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for u16 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -109,7 +110,7 @@ impl Deserialize for i16 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for i16 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -130,7 +131,7 @@ impl Deserialize for i32 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for i32 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -151,7 +152,7 @@ impl Deserialize for i64 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for i64 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -175,7 +176,7 @@ impl Deserialize for f32 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for f32 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -199,7 +200,7 @@ impl Deserialize for f64 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for f64 {
     fn test_gen_random() -> Self {
         rand::random()
@@ -256,7 +257,7 @@ impl std::fmt::Display for VarInt {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for VarInt {
     fn test_gen_random() -> Self {
         let out: i32 = rand::random();
@@ -280,7 +281,7 @@ impl Deserialize for VarLong {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for VarLong {
     fn test_gen_random() -> Self {
         let out: i64 = rand::random();
@@ -358,7 +359,7 @@ impl Deserialize for String {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for String {
     fn test_gen_random() -> Self {
         let raw_len: u8 = rand::random();
@@ -445,7 +446,7 @@ impl Deserialize for IntPosition {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for IntPosition {
     fn test_gen_random() -> Self {
         let x: i32 = ((rand::random::<u32>() % (1 << 26)) as i32) - (1 << 25);
@@ -473,7 +474,7 @@ impl Deserialize for Angle {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for Angle {
     fn test_gen_random() -> Self {
         Self {
@@ -517,7 +518,7 @@ impl Deserialize for UUID4 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for UUID4 {
     fn test_gen_random() -> Self {
         UUID4::random()
@@ -559,7 +560,7 @@ impl Into<nbt::NamedTag> for NamedNbtTag {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for NamedNbtTag {
     fn test_gen_random() -> Self {
         Self {
@@ -597,7 +598,7 @@ impl FixedInt {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for FixedInt {
     fn test_gen_random() -> Self {
         FixedInt::new(f64::test_gen_random(), 16)
@@ -658,7 +659,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl<T> TestRandom for Option<T>
 where
     T: TestRandom,
@@ -723,7 +724,7 @@ impl Deserialize for Slot {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for Slot {
     fn test_gen_random() -> Self {
         let item_id = VarInt::test_gen_random();
@@ -738,10 +739,11 @@ impl TestRandom for Slot {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
-    use std::fmt::Debug;
+    use alloc::fmt::Debug;
+    use alloc::borrow::ToOwned;
 
     #[test]
     fn test_bool() {

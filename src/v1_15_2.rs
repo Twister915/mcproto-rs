@@ -1,8 +1,9 @@
 use crate::{types::*, uuid::*, *};
-use std::fmt::Debug;
-use std::cell::Cell;
+use alloc::{string::{String, ToString}, vec::Vec, borrow::ToOwned, boxed::Box};
+use alloc::fmt;
+use fmt::Debug;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -903,7 +904,7 @@ impl From<Vec<u8>> for RemainingBytes {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for RemainingBytes {
     fn test_gen_random() -> Self {
         let size: usize = rand::random::<usize>() % 256;
@@ -1060,7 +1061,7 @@ impl Deserialize for BlockChangeHorizontalPosition {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for BlockChangeHorizontalPosition {
     fn test_gen_random() -> Self {
         BlockChangeHorizontalPosition {
@@ -1219,7 +1220,7 @@ impl Deserialize for CommandNodeSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for CommandNodeSpec {
     fn test_gen_random() -> Self {
         let children_indices = <VarIntCountedArray<VarInt>>::test_gen_random();
@@ -1278,7 +1279,7 @@ impl CommandArgumentNodeSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for CommandArgumentNodeSpec {
     fn test_gen_random() -> Self {
         let name = String::test_gen_random();
@@ -1374,7 +1375,7 @@ impl<T> Clone for NumParserProps<T> where T: Clone {
 }
 
 impl<T> Debug for NumParserProps<T> where T: Debug {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "NumParserProps(min={:?}, max={:?})", self.min, self.max)
     }
 }
@@ -1434,7 +1435,7 @@ impl<T> Deserialize for NumParserProps<T> where T: Deserialize {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl<T> TestRandom for NumParserProps<T> where
     T: TestRandom + std::cmp::PartialOrd,
     rand::distributions::Standard: rand::distributions::Distribution<T>,
@@ -1525,7 +1526,7 @@ impl Deserialize for TeamMember {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for TeamMember {
     fn test_gen_random() -> Self {
         use TeamMember::*;
@@ -1618,7 +1619,7 @@ impl Deserialize for UpdateScoreSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for UpdateScoreSpec {
     fn test_gen_random() -> Self {
         Self {
@@ -1715,7 +1716,7 @@ impl Deserialize for StopSoundSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for StopSoundSpec {
     fn test_gen_random() -> Self {
         let source = if rand::random::<bool>() {
@@ -1850,7 +1851,7 @@ impl Deserialize for GameChangeReason {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for GameChangeReason {
     fn test_gen_random() -> Self {
         // todo
@@ -1950,7 +1951,7 @@ impl From<Option<MapColumnsSpec>> for MapColumns {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for MapColumns {
     fn test_gen_random() -> Self {
         <Option<MapColumnsSpec>>::test_gen_random().into()
@@ -2051,7 +2052,7 @@ impl<A> Deserialize for PlayerInfoAction<A>
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl<A> TestRandom for PlayerInfoAction<A>
     where
         A: Clone + PartialEq + Debug + TestRandom
@@ -2281,7 +2282,7 @@ impl Deserialize for AdvancementDisplayFlags {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for AdvancementDisplayFlags {
     fn test_gen_random() -> Self {
         let background_texture = if rand::random::<bool>() {
@@ -2574,7 +2575,7 @@ impl Deserialize for RecipeSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for RecipeSpec {
     fn test_gen_random() -> Self {
         RecipeSpec {
@@ -2645,7 +2646,7 @@ impl Deserialize for RecipeCraftingShapedSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for RecipeCraftingShapedSpec {
     fn test_gen_random() -> Self {
         use rand::distributions::Distribution;
@@ -2768,7 +2769,7 @@ impl Deserialize for ChunkData {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for ChunkData {
     fn test_gen_random() -> Self {
         ChunkData {
@@ -2786,15 +2787,13 @@ impl TestRandom for ChunkData {
 pub const LIGHT_DATA_LENGTH: usize = 2048;
 pub const LIGHT_DATA_SECTIONS: usize = 18;
 
+#[derive(Clone, PartialEq)]
 pub struct LightingData {
     pub data: Box<[Option<[u8; LIGHT_DATA_LENGTH]>; LIGHT_DATA_SECTIONS]>,
-
-    _update_mask: Cell<Option<VarInt>>,
-    _reset_mask: Cell<Option<VarInt>>,
 }
 
 impl LightingData {
-    fn deserialize(update_mask: VarInt, reset_mask: VarInt, mut data: &[u8]) -> DeserializeResult<Self> {
+    fn deserialize(update_mask: VarInt, mut data: &[u8]) -> DeserializeResult<Self> {
         let mut out = Box::new([None; LIGHT_DATA_SECTIONS]);
         for i in 0..LIGHT_DATA_SECTIONS {
             // gotta read the var int
@@ -2819,39 +2818,16 @@ impl LightingData {
 
         let result = Self {
             data: out,
-            _update_mask: Cell::new(Some(update_mask)),
-            _reset_mask: Cell::new(Some(reset_mask)),
         };
 
         Deserialized::ok(result, data)
     }
 
-    fn update_mask(&self) -> &VarInt {
-        Self::lazily_get(&self._update_mask, || self.compute_update_mask())
-    }
-
-    fn reset_mask(&self) -> &VarInt {
-        Self::lazily_get(&self._reset_mask, || self.compute_reset_mask())
-    }
-
-    fn lazily_get<T, F>(option: &Cell<Option<T>>, provider: F) -> &T where F: FnOnce() -> T {
-        unsafe {
-            let ptr = option.as_ptr().as_mut().expect("non-null");
-            match ptr {
-                Some(data) => data,
-                None => {
-                    ptr.replace(provider());
-                    ptr.as_ref().expect("it's there")
-                }
-            }
-        }
-    }
-
-    fn compute_update_mask(&self) -> VarInt {
+    fn update_mask(&self) -> VarInt {
         self.compute_has_mask(true)
     }
 
-    fn compute_reset_mask(&self) -> VarInt {
+    fn reset_mask(&self) -> VarInt {
         self.compute_has_mask(false)
     }
 
@@ -2878,8 +2854,8 @@ impl LightingData {
     }
 }
 
-impl std::fmt::Debug for LightingData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for LightingData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "LightingData(update={:018b}, reset={:018b}, size={}, bytes={})",
@@ -2893,33 +2869,13 @@ impl std::fmt::Debug for LightingData {
     }
 }
 
-impl std::fmt::Display for LightingData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        <dyn std::fmt::Debug>::fmt(self, f)
+impl fmt::Display for LightingData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <dyn fmt::Debug>::fmt(self, f)
     }
 }
 
-impl Clone for LightingData {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data.clone(),
-            _update_mask: Cell::new(Some(self.update_mask().clone())),
-            _reset_mask: Cell::new(Some(self.reset_mask().clone())),
-        }
-    }
-}
-
-impl PartialEq for LightingData {
-    fn eq(&self, other: &Self) -> bool {
-        self.data.eq(&other.data) &&
-            self.update_mask().eq(other.update_mask()) &&
-            self.reset_mask().eq(other.reset_mask())
-    }
-}
-
-unsafe impl Sync for LightingData {}
-
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl LightingData {
     fn gen_random_mask() -> i32 {
         let rand: u32 = rand::random();
@@ -2927,7 +2883,7 @@ impl LightingData {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for LightingData {
     fn test_gen_random() -> Self {
         let set_mask = Self::gen_random_mask();
@@ -2942,20 +2898,8 @@ impl TestRandom for LightingData {
             }
         }
 
-        let cache_masks = rand::random::<bool>();
-
-        if cache_masks {
-            Self {
-                data,
-                _update_mask: Cell::new(Some(VarInt(set_mask))),
-                _reset_mask: Cell::new(None),
-            }
-        } else {
-            Self {
-                data,
-                _update_mask: Cell::new(None),
-                _reset_mask: Cell::new(None),
-            }
+        Self {
+            data,
         }
     }
 }
@@ -2981,11 +2925,11 @@ impl Deserialize for LightingUpdateSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         let Deserialized { value: skylight_update_mask, data } = VarInt::mc_deserialize(data)?;
         let Deserialized { value: blocklight_update_mask, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: skylight_reset_mask, data } = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: blocklight_reset_mask, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: _, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: _, data } = VarInt::mc_deserialize(data)?;
 
-        let Deserialized { value: skylight_data, data } = LightingData::deserialize(skylight_update_mask, skylight_reset_mask, data)?;
-        let Deserialized { value: blocklight_data, data } = LightingData::deserialize(blocklight_update_mask, blocklight_reset_mask, data)?;
+        let Deserialized { value: skylight_data, data } = LightingData::deserialize(skylight_update_mask, data)?;
+        let Deserialized { value: blocklight_data, data } = LightingData::deserialize(blocklight_update_mask, data)?;
 
         Deserialized::ok(Self {
             skylight_data,
@@ -2994,7 +2938,7 @@ impl Deserialize for LightingUpdateSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for LightingUpdateSpec {
     fn test_gen_random() -> Self {
         Self {
@@ -3004,7 +2948,7 @@ impl TestRandom for LightingUpdateSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 pub mod tests {
     use super::*;
     use crate::packet_test_cases;

@@ -1,5 +1,7 @@
 use crate::{SerializeResult, Serializer};
-#[cfg(test)]
+use alloc::vec::Vec;
+
+#[cfg(all(test, feature = "std"))]
 #[macro_export]
 macro_rules! packet_test_cases {
     ($pnam: ident, $varnam: ident, $bodnam: ident, $testnam: ident, $benchnams: ident, $benchnamd: ident) => {
@@ -70,13 +72,13 @@ macro_rules! packet_test_cases {
     };
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct BenchSerializer {
     data: Vec<u8>,
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl Serializer for BenchSerializer {
     fn serialize_bytes(&mut self, data: &[u8]) -> SerializeResult {
         self.data.extend_from_slice(data);
@@ -84,7 +86,7 @@ impl Serializer for BenchSerializer {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl BenchSerializer {
     pub fn reset(&mut self) {
         self.data.clear();

@@ -1,8 +1,7 @@
 use crate::utils::*;
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::{Deserializer, Serializer};
-use std::fmt::{Debug, Display, Formatter};
+use alloc::{fmt, string::{ToString, String}};
+use fmt::{Display, Debug, Formatter};
 
 #[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct UUID4 {
@@ -10,13 +9,13 @@ pub struct UUID4 {
 }
 
 impl Display for UUID4 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str(self.hex().as_str())
     }
 }
 
 impl Debug for UUID4 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str("UUID4{")?;
         f.write_str(self.hex().as_str())?;
         f.write_str("}")
@@ -72,6 +71,7 @@ impl UUID4 {
         RawUUID::from_str(from).and_then(move |raw| raw.parse4())
     }
 
+    #[cfg(feature = "std")]
     pub fn random() -> Self {
         UUID4 {
             raw: rand::random(),
@@ -101,27 +101,26 @@ struct RawUUID<'a> {
 
 impl<'a> RawUUID<'a> {
     fn from_str(from: &'a str) -> Option<RawUUID<'a>> {
-        const PATTERN: &str = r"^([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})$";
-        // let re = Regex::new(PATTERN).expect("regex is valid");
-        lazy_static! {
-            static ref RE: Regex = Regex::new(PATTERN).expect("regex is valid");
-        }
+        // 8-4-4-4-12
+        let (s0, from) = str_split(from, 8)?;
+        str_check_hex(s0)?;
+        let from = str_tag(from, "-")?;
+        let (s1, from) = str_split(from, 4)?;
+        str_check_hex(s1)?;
+        let from = str_tag(from, "-")?;
+        let (s2, from) = str_split(from, 4)?;
+        str_check_hex(s2)?;
+        let from = str_tag(from, "-")?;
+        let (s3, from) = str_split(from, 4)?;
+        str_check_hex(s3)?;
+        let from = str_tag(from, "-")?;
+        let (s4, from) = str_split(from, 12)?;
+        str_check_hex(s4)?;
+        str_check_eof(from)?;
 
-        RE.captures_iter(from)
-            .filter_map(move |c| {
-                c.get(1).map(move |g| g.as_str()).and_then(move |g0| {
-                    c.get(2).map(move |g| g.as_str()).and_then(move |g1| {
-                        c.get(3).map(move |g| g.as_str()).and_then(move |g2| {
-                            c.get(4).map(move |g| g.as_str()).and_then(move |g3| {
-                                c.get(5).map(move |g4| RawUUID {
-                                    parts: [g0, g1, g2, g3, g4.as_str()],
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-            .nth(0)
+        Some(Self{
+            parts: [s0, s1, s2, s3, s4],
+        })
     }
 
     fn parse4(self) -> Option<UUID4> {
@@ -141,30 +140,55 @@ impl<'a> RawUUID<'a> {
 
         Some(UUID4 { raw })
     }
-    //
-    // fn parse3(self) -> Option<UUID3> {
-    //     self.parse4().map(move |id| UUID3 { raw: id.raw })
-    // }
 }
 
-// #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
-// pub struct UUID3 {
-//     raw: u128,
-// }
-//
-// impl UUID3 {
-//     pub fn parse(from: &str) -> Option<UUID3> {
-//         RawUUID::from_str(from).and_then(move |id| id.parse3())
-//     }
-//
-//     pub fn from(namespace: UUID4, data: &str) -> UUID3 {
-//         namespace.raw
-//     }
-// }
+fn str_tag<'a>(source: &'a str, tag: &str) -> Option<&'a str> {
+    let (front, back) = str_split(source, tag.len())?;
+    if front != tag {
+        None
+    } else {
+        Some(back)
+    }
+}
 
-#[cfg(test)]
+fn str_check_eof(source: &str) -> Option<()> {
+    if source.is_empty() {
+        Some(())
+    } else {
+        None
+    }
+}
+
+fn str_check_hex(mut source: &str) -> Option<()> {
+    if source.is_empty() {
+        return None
+    }
+
+    loop {
+        let (part, rest) = str_split(source, 2)?;
+        for c in part.chars() {
+            parse_hex_char(c as u8)?;
+        }
+
+        source = rest;
+        if source.is_empty() {
+            return Some(());
+        }
+    }
+}
+
+fn str_split(source: &str, n: usize) -> Option<(&str, &str)> {
+    if source.len() < n {
+        None
+    } else {
+        Some(source.split_at(n))
+    }
+}
+
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::UUID4;
+    use alloc::string::ToString;
 
     #[test]
     fn test_random_uuid4() {
@@ -228,5 +252,24 @@ mod tests {
         let json = format!("\"{}\"", id.to_string());
         let deserialized: UUID4 = serde_json::from_str(json.as_str()).expect("should read fine");
         assert_eq!(deserialized, id);
+    }
+
+    #[bench]
+    fn bench_parse_uuid4(b: &mut test::Bencher) {
+        let rand = UUID4::random();
+        let str = rand.to_string();
+        b.bytes = str.bytes().len() as u64;
+        b.iter(|| {
+            UUID4::parse(str.as_str()).expect("should parse fine")
+        })
+    }
+
+    #[bench]
+    fn bench_uuid4_to_str(b: &mut test::Bencher) {
+        let rand = UUID4::random();
+        b.bytes = 128;
+        b.iter(|| {
+            rand.to_string()
+        })
     }
 }

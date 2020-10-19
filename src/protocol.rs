@@ -1,5 +1,5 @@
 use crate::{Deserialize, DeserializeErr, Serialize};
-use std::fmt;
+use alloc::{string::String, fmt, vec::Vec};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ProtocolSpec {
@@ -73,7 +73,7 @@ pub trait ProtocolType: Serialize + Deserialize {}
 
 impl<T: Serialize + Deserialize> ProtocolType for T {}
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 pub trait TestRandom {
     fn test_gen_random() -> Self;
 }
@@ -115,7 +115,7 @@ macro_rules! __protocol_body_def_helper {
             }
         }
 
-        #[cfg(test)]
+        #[cfg(all(test, feature = "std"))]
         impl TestRandom for $bodyt {
             fn test_gen_random() -> Self {
                 Self::default()
@@ -147,7 +147,7 @@ macro_rules! __protocol_body_def_helper {
             }
         }
 
-        #[cfg(test)]
+        #[cfg(all(test, feature = "std"))]
         impl TestRandom for $bodyt {
             fn test_gen_random() -> Self {
                 Self{ $($fname: <$ftyp>::test_gen_random()),+ }
@@ -433,7 +433,7 @@ macro_rules! proto_enum_with_type {
             }
         }
 
-        #[cfg(test)]
+        #[cfg(all(test, feature = "std"))]
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
                 let mut idx: usize = (rand::random::<usize>() % (count_num!($($bval),+))) + 1;
@@ -537,7 +537,7 @@ macro_rules! proto_str_enum {
             }
         }
 
-        #[cfg(test)]
+        #[cfg(all(test, feature = "std"))]
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
                 let mut idx: usize = (rand::random::<usize>() % (count_num!($($nam),+))) + 1;
@@ -601,7 +601,7 @@ macro_rules! proto_byte_flag {
             }
         }
 
-        #[cfg(test)]
+        #[cfg(all(test, feature = "std"))]
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
                 let mut out = <$typname>::default();
@@ -722,7 +722,7 @@ macro_rules! counted_array_type {
             }
         }
 
-        #[cfg(test)]
+        #[cfg(all(test, feature = "std"))]
         impl<T> TestRandom for $name<T>
         where
             T: TestRandom + Debug + Clone + PartialEq,

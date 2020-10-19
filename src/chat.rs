@@ -1,7 +1,6 @@
-use std::{fmt, str};
+use alloc::{vec::Vec, string::{String, ToString}, fmt, collections::{BTreeMap}, boxed::Box, borrow::ToOwned};
 use serde::{Serialize, Deserialize, Deserializer, de, Serializer};
 use serde::de::{Visitor, Error, IntoDeserializer, MapAccess};
-use std::collections::BTreeMap;
 use serde::ser::SerializeMap;
 use serde_json::Value;
 use crate::{SerializeResult, DeserializeResult};
@@ -797,7 +796,8 @@ impl<'de> Deserialize<'de> for ColorCode {
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where
-                E: Error, {
+                E: de::Error,
+            {
                 if let Some(code) = ColorCode::from_name(v) {
                     Ok(code)
                 } else {
@@ -1029,10 +1029,10 @@ impl super::Deserialize for Chat {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 use super::protocol::TestRandom;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for Chat {
     fn test_gen_random() -> Self {
         let str = String::test_gen_random();
@@ -1040,7 +1040,7 @@ impl TestRandom for Chat {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 pub mod tests {
 
     use super::*;

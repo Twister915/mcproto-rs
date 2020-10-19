@@ -1,4 +1,4 @@
-use std::fmt;
+use alloc::{string::String, fmt};
 
 pub enum SerializeErr {
     FailedJsonEncode(String),

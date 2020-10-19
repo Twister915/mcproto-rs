@@ -1,4 +1,5 @@
 use crate::{DeserializeErr, DeserializeResult, Deserialized};
+use alloc::string::String;
 
 #[inline]
 pub fn read_one_byte(data: &[u8]) -> DeserializeResult<u8> {

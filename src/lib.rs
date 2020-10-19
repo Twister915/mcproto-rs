@@ -1,7 +1,10 @@
 #![feature(const_fn)]
 #![feature(test)]
+#![cfg_attr(not(test), no_std)]
 
-#[cfg(test)]
+extern crate alloc;
+
+#[cfg(all(test, feature = "std"))]
 extern crate test;
 
 mod deserialize;
@@ -17,6 +20,6 @@ pub mod v1_15_2;
 pub use deserialize::*;
 pub use serialize::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test_macros;
 mod chat;

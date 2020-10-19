@@ -1,6 +1,5 @@
 use crate::types::VarInt;
-use std::fmt;
-use std::string::FromUtf8Error;
+use alloc::{vec::Vec, string::{FromUtf8Error, String}, fmt};
 
 pub enum DeserializeErr {
     Eof,

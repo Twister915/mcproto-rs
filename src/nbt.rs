@@ -2,9 +2,9 @@ use crate::utils::{
     read_int, read_long, read_one_byte, read_short, take, write_int, write_long, write_short,
 };
 use crate::{DeserializeErr, DeserializeResult, Deserialized};
-use std::fmt;
+use alloc::{string::{String, ToString}, borrow::ToOwned, fmt, vec::Vec};
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -26,7 +26,7 @@ impl NamedTag {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for NamedTag {
     fn test_gen_random() -> Self {
         Self {
@@ -125,7 +125,7 @@ impl Tag {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for Tag {
     fn test_gen_random() -> Self {
         let random_idx = rand::random::<usize>() % 8;
@@ -518,7 +518,7 @@ impl Tag {
 }
 
 // test
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
     use flate2::read::GzDecoder;

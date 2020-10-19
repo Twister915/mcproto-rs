@@ -5,9 +5,9 @@ use crate::{
     SerializeErr, SerializeResult,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt;
+use alloc::{string::String, fmt, vec::Vec};
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -42,7 +42,7 @@ impl McDeserialize for StatusSpec {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for StatusSpec {
     fn test_gen_random() -> Self {
         Self {
@@ -113,45 +113,78 @@ impl<'de> Deserialize<'de> for StatusFaviconSpec {
             }
 
             fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                use lazy_static::lazy_static;
-                use regex::Regex;
-                // regex to parse valid base64 content
-                const PATTERN: &str = r"^data:([A-Za-z/]+);base64,([-A-Za-z0-9+/]*={0,3})$";
-                lazy_static! {
-                    static ref RE: Regex = Regex::new(PATTERN).expect("regex is valid");
-                }
-
-                // try to use regex on the input
-                // RE.captures_iter(v).next() means "try to get the first capture iterator"
-                // then we take that iterator, get(1), and if 1 exists, get(2), and if both exist,
-                // then we try to parse the base64, and drop the error if one occurs. We then
-                // wrap the content_type and parsed data in StatusFaviconSpec
-                // then we convert the option to a result using map and unwrap_or_else
-                let mut captures: regex::CaptureMatches<'_, '_> = RE.captures_iter(v);
-                captures
-                    .next()
-                    .and_then(move |captures| {
-                        captures.get(1).and_then(move |content_type| {
-                            captures.get(2).and_then(move |raw_base64| {
-                                base64::decode(raw_base64.as_str().as_bytes())
-                                    .map(move |data| StatusFaviconSpec {
-                                        content_type: content_type.as_str().to_owned(),
-                                        data,
-                                    })
-                                    .ok()
-                            })
+                // favicon syntax data:{content-type};base64,{}
+                let v = str_tag(v, "data:", &self)?;
+                let content_type = str_until_pat(v, ";", &self)?;
+                let rest = str_tag(v, "base64,", &self)?;
+                match base64::decode(rest) {
+                    Ok(data) => {
+                        Ok(StatusFaviconSpec{
+                            data,
+                            content_type: content_type.to_owned(),
                         })
-                    })
-                    .map(move |result| Ok(result))
-                    .unwrap_or_else(|| {
-                        Err(serde::de::Error::invalid_value(
-                            serde::de::Unexpected::Str(v),
-                            &self,
-                        ))
-                    })
+                    },
+                    Err(err) => {
+                        Err(E::custom(format_args!("failed base64 decode {:?}", err)))
+                    }
+                }
             }
         }
 
         deserializer.deserialize_str(Visitor {})
+    }
+}
+
+fn str_tag<'a, E, V>(
+    target: &'a str,
+    expected: &str,
+    v: &V,
+) -> Result<&'a str, E> where
+    E: serde::de::Error,
+    V: serde::de::Visitor<'a>
+{
+    let (front, back) = str_take(target, expected.len(), v)?;
+    if front != expected {
+        Err(E::invalid_value(serde::de::Unexpected::Str(target), v))
+    } else {
+        Ok(back)
+    }
+}
+
+fn str_until_pat<'a, E, V>(
+    target: &'a str,
+    pat: &str,
+    v: &V,
+) -> Result<&'a str, E> where
+    E: serde::de::Error,
+    V: serde::de::Visitor<'a>
+{
+    let n_pat = pat.len();
+    if target.len() < n_pat {
+        return Err(E::invalid_value(serde::de::Unexpected::Str(target), v));
+    }
+
+    for i in 0..=(target.len()-n_pat) {
+        let v = &target[i..i+n_pat];
+        if v == pat {
+            return Ok(&target[..i]);
+        }
+    }
+
+    Err(E::invalid_value(serde::de::Unexpected::Str(target), v))
+}
+
+fn str_take<'a, E, V>(
+    target: &'a str,
+    n: usize,
+    v: &V,
+) -> Result<(&'a str, &'a str), E> where
+    E: serde::de::Error,
+    V: serde::de::Visitor<'a>
+{
+    if target.len() < n {
+        Err(E::invalid_value(serde::de::Unexpected::Str(target), v))
+    } else {
+        Ok(target.split_at(n))
     }
 }
