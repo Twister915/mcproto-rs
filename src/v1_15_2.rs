@@ -3035,6 +3035,16 @@ impl EntityMetadata {
 
         None
     }
+
+    pub fn get_mut(&mut self, index: u8) -> Option<&mut EntityMetadataFieldData> {
+        for field in &mut self.fields {
+            if field.index == index {
+                return Some(&mut field.data);
+            }
+        }
+
+        None
+    }
 }
 
 impl<'a> core::iter::IntoIterator for &'a EntityMetadata {
