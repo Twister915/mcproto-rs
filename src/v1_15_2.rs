@@ -6,44 +6,7 @@ use fmt::Debug;
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum PacketDirection {
-    ClientBound,
-    ServerBound,
-}
-
-impl PacketDirection {
-    pub fn opposite(&self) -> Self {
-        use PacketDirection::*;
-        match self {
-            ClientBound => ServerBound,
-            ServerBound => ClientBound,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum State {
-    Handshaking,
-    Status,
-    Login,
-    Play,
-}
-
-impl State {
-    pub fn name(&self) -> String {
-        use State::*;
-        match self {
-            Handshaking => "Handshaking",
-            Status => "Status",
-            Login => "Login",
-            Play => "Play",
-        }
-            .to_owned()
-    }
-}
-
-define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, State, i32, Id => {
+define_protocol!(578, Packet578, RawPacket578, RawPacket578Body => {
     // handshaking
     Handshake, 0x00, Handshaking, ServerBound => HandshakeSpec {
         version: VarInt,
