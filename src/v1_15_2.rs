@@ -3041,465 +3041,461 @@ proto_struct!(DustParticleData {
 pub mod tests {
     use super::*;
     use crate::packet_test_cases;
-    use crate::protocol::{Packet, RawPacket};
-    #[cfg(feature = "bench")]
-    use crate::test_macros::BenchSerializer;
-    use crate::types::BytesSerializer;
 
-    packet_test_cases!(Packet578, Handshake, HandshakeSpec,
+    packet_test_cases!(RawPacket578, Packet578, Handshake, HandshakeSpec,
         test_handshake, bench_write_handshake, bench_read_handshake);
 
-    packet_test_cases!(Packet578, StatusRequest, StatusRequestSpec,
+    packet_test_cases!(RawPacket578, Packet578, StatusRequest, StatusRequestSpec,
         test_status_request, bench_write_status_request, bench_read_status_request);
 
-    packet_test_cases!(Packet578, StatusPing, StatusPingSpec,
+    packet_test_cases!(RawPacket578, Packet578, StatusPing, StatusPingSpec,
         test_status_ping, bench_write_status_ping, bench_read_status_ping);
 
-    packet_test_cases!(Packet578, StatusResponse, StatusResponseSpec,
+    packet_test_cases!(RawPacket578, Packet578, StatusResponse, StatusResponseSpec,
         test_status_response, bench_write_status_response, bench_read_status_response);
 
-    packet_test_cases!(Packet578, StatusPong, StatusPongSpec,
+    packet_test_cases!(RawPacket578, Packet578, StatusPong, StatusPongSpec,
         test_status_pong, bench_write_status_pong, bench_read_status_pong);
 
-    packet_test_cases!(Packet578, LoginDisconnect, LoginDisconnectSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginDisconnect, LoginDisconnectSpec,
         test_login_disconnect, bench_write_login_disconnect, bench_read_login_disconnect);
 
-    packet_test_cases!(Packet578, LoginEncryptionRequest, LoginEncryptionRequestSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginEncryptionRequest, LoginEncryptionRequestSpec,
         test_login_encryption_request, bench_write_login_encryption_request, bench_read_login_encryption_request);
 
-    packet_test_cases!(Packet578, LoginSuccess, LoginSuccessSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginSuccess, LoginSuccessSpec,
         test_login_success, bench_write_login_success, bench_read_login_success);
 
-    packet_test_cases!(Packet578, LoginSetCompression, LoginSetCompressionSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginSetCompression, LoginSetCompressionSpec,
         test_login_set_compression, bench_write_login_set_compression, bench_read_login_set_compression);
 
-    packet_test_cases!(Packet578, LoginPluginRequest, LoginPluginRequestSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginPluginRequest, LoginPluginRequestSpec,
         test_login_plugin_request, bench_write_login_plugin_request, bench_read_login_plugin_request);
 
-    packet_test_cases!(Packet578, LoginStart, LoginStartSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginStart, LoginStartSpec,
         test_login_start, bench_write_login_start, bench_read_login_start);
 
-    packet_test_cases!(Packet578, LoginEncryptionResponse, LoginEncryptionResponseSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginEncryptionResponse, LoginEncryptionResponseSpec,
         test_login_encryption_response, bench_write_login_encryption_response, bench_read_login_encryption_response);
 
-    packet_test_cases!(Packet578, LoginPluginResponse, LoginPluginResponseSpec,
+    packet_test_cases!(RawPacket578, Packet578, LoginPluginResponse, LoginPluginResponseSpec,
         test_login_plugin_response, bench_write_login_plugin_response, bench_read_login_plugin_response);
 
-    packet_test_cases!(Packet578, PlaySpawnEntity, PlaySpawnEntitySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnEntity, PlaySpawnEntitySpec,
         test_play_spawn_entity, bench_write_play_spawn_entity, bench_read_play_spawn_entity);
 
-    packet_test_cases!(Packet578, PlaySpawnExperienceOrb, PlaySpawnExperienceOrbSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnExperienceOrb, PlaySpawnExperienceOrbSpec,
         test_play_spawn_experience_orb, bench_write_play_spawn_experience_orb, bench_read_play_spawn_experience_orb);
 
-    packet_test_cases!(Packet578, PlaySpawnWeatherEntity, PlaySpawnWeatherEntitySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnWeatherEntity, PlaySpawnWeatherEntitySpec,
         test_play_spawn_weather_entity, bench_write_play_spawn_weather_entity, bench_read_play_spawn_weather_entity);
 
-    packet_test_cases!(Packet578, PlaySpawnLivingEntity, PlaySpawnLivingEntitySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnLivingEntity, PlaySpawnLivingEntitySpec,
         test_play_spawn_living_entity, bench_write_play_spawn_living_entity, bench_read_play_spawn_living_entity);
 
-    packet_test_cases!(Packet578, PlaySpawnPainting, PlaySpawnPaintingSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnPainting, PlaySpawnPaintingSpec,
         test_play_spawn_painting, bench_write_play_spawn_painting, bench_read_play_spawn_painting);
 
-    packet_test_cases!(Packet578, PlaySpawnPlayer, PlaySpawnPlayerSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnPlayer, PlaySpawnPlayerSpec,
         test_play_spawn_player, bench_write_play_spawn_player, bench_read_play_spawn_player);
 
-    packet_test_cases!(Packet578, PlayEntityAnimation, PlayEntityAnimationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityAnimation, PlayEntityAnimationSpec,
         test_play_entity_animation, bench_write_play_entity_animation, bench_read_play_entity_animation);
 
-    packet_test_cases!(Packet578, PlayStatistics, PlayStatisticsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayStatistics, PlayStatisticsSpec,
         test_play_statistics, bench_write_play_statistics, bench_read_play_statistics);
 
-    packet_test_cases!(Packet578, PlayAcknowledgePlayerDigging, PlayAcknowledgePlayerDiggingSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayAcknowledgePlayerDigging, PlayAcknowledgePlayerDiggingSpec,
         test_play_acknowledge_player_digging, bench_write_play_acknowledge_player_digging, bench_read_play_acknowledge_player_digging);
 
-    packet_test_cases!(Packet578, PlayBlockBreakAnimation, PlayBlockBreakAnimationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayBlockBreakAnimation, PlayBlockBreakAnimationSpec,
         test_play_block_break_animation, bench_write_play_block_break_animation, bench_read_play_block_break_animation);
 
-    packet_test_cases!(Packet578, PlayBlockEntityData, PlayBlockEntityDataSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayBlockEntityData, PlayBlockEntityDataSpec,
         test_play_block_entity_data, bench_write_play_block_entity_data, bench_read_play_block_entity_data);
 
-    packet_test_cases!(Packet578, PlayBlockAction, PlayBlockActionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayBlockAction, PlayBlockActionSpec,
         test_play_block_action, bench_write_play_block_action, bench_read_play_block_action);
 
-    packet_test_cases!(Packet578, PlayBlockChange, PlayBlockChangeSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayBlockChange, PlayBlockChangeSpec,
         test_play_block_change, bench_write_play_block_change, bench_read_play_block_change);
 
-    packet_test_cases!(Packet578, PlayBossBar, PlayBossBarSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayBossBar, PlayBossBarSpec,
         test_play_boss_bar, bench_write_play_boss_bar, bench_read_play_boss_bar);
 
-    packet_test_cases!(Packet578, PlayServerDifficulty, PlayServerDifficultySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerDifficulty, PlayServerDifficultySpec,
         test_play_server_difficulty, bench_write_play_server_difficulty, bench_read_play_server_difficulty);
 
-    packet_test_cases!(Packet578, PlayServerChatMessage, PlayServerChatMessageSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerChatMessage, PlayServerChatMessageSpec,
         test_play_server_chat_message, bench_write_play_server_chat_message, bench_read_play_server_chat_message);
 
-    packet_test_cases!(Packet578, PlayMultiBlockChange, PlayMultiBlockChangeSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayMultiBlockChange, PlayMultiBlockChangeSpec,
         test_play_multi_block_change, bench_write_play_multi_block_change, bench_read_play_multi_block_change);
 
-    packet_test_cases!(Packet578, PlayTabComplete, PlayTabCompleteSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTabComplete, PlayTabCompleteSpec,
         test_play_tab_complete, bench_write_play_tab_complete, bench_read_play_tab_complete);
 
-    packet_test_cases!(Packet578, PlayDeclareCommands, PlayDeclareCommandsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayDeclareCommands, PlayDeclareCommandsSpec,
         test_play_declare_commands, bench_write_play_declare_commands, bench_read_play_declare_commands);
 
-    packet_test_cases!(Packet578, PlayServerWindowConfirmation, PlayServerWindowConfirmationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerWindowConfirmation, PlayServerWindowConfirmationSpec,
         test_play_server_window_confirmation, bench_write_play_server_window_confirmation, bench_read_play_server_window_confirmation);
 
-    packet_test_cases!(Packet578, PlayServerCloseWindow, PlayServerCloseWindowSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerCloseWindow, PlayServerCloseWindowSpec,
         test_play_server_close_window, bench_write_play_server_close_window, bench_read_play_server_close_window);
 
-    packet_test_cases!(Packet578, PlayWindowItems, PlayWindowItemsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayWindowItems, PlayWindowItemsSpec,
         test_play_window_items, bench_write_play_window_items, bench_read_play_window_items);
 
-    packet_test_cases!(Packet578, PlayWindowProperty, PlayWindowPropertySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayWindowProperty, PlayWindowPropertySpec,
         test_play_window_property, bench_write_play_window_property, bench_read_play_window_property);
 
-    packet_test_cases!(Packet578, PlaySetSlot, PlaySetSlotSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySetSlot, PlaySetSlotSpec,
         test_play_set_slot, bench_write_play_set_slot, bench_read_play_set_slot);
 
-    packet_test_cases!(Packet578, PlaySetCooldown, PlaySetCooldownSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySetCooldown, PlaySetCooldownSpec,
         test_play_set_cooldown, bench_write_play_set_cooldown, bench_read_play_set_cooldown);
 
-    packet_test_cases!(Packet578, PlayServerPluginMessage, PlayServerPluginMessageSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerPluginMessage, PlayServerPluginMessageSpec,
         test_play_server_plugin_message, bench_write_play_server_plugin_message, bench_read_play_server_plugin_message);
 
-    packet_test_cases!(Packet578, PlayNamedSoundEffect, PlayNamedSoundEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayNamedSoundEffect, PlayNamedSoundEffectSpec,
         test_play_named_sound_effect, bench_write_play_named_sound_effect, bench_read_play_named_sound_effect);
 
-    packet_test_cases!(Packet578, PlayDisconnect, PlayDisconnectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayDisconnect, PlayDisconnectSpec,
         test_play_disconnect, bench_write_play_disconnect, bench_read_play_disconnect);
 
-    packet_test_cases!(Packet578, PlayEntityStatus, PlayEntityStatusSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityStatus, PlayEntityStatusSpec,
         test_play_entity_status, bench_write_play_entity_status, bench_read_play_entity_status);
 
-    packet_test_cases!(Packet578, PlayExplosion, PlayExplosionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayExplosion, PlayExplosionSpec,
         test_play_explosion, bench_write_play_explosion, bench_read_play_explosion);
 
-    packet_test_cases!(Packet578, PlayUnloadChunk, PlayUnloadChunkSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUnloadChunk, PlayUnloadChunkSpec,
         test_play_unload_chunk, bench_write_play_unload_chunk, bench_read_play_unload_chunk);
 
-    packet_test_cases!(Packet578, PlayChangeGameState, PlayChangeGameStateSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayChangeGameState, PlayChangeGameStateSpec,
         test_play_change_game_state, bench_write_play_change_game_state, bench_read_play_change_game_state);
 
-    packet_test_cases!(Packet578, PlayOpenHorseWindow, PlayOpenHorseWindowSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayOpenHorseWindow, PlayOpenHorseWindowSpec,
         test_play_open_horse_window, bench_write_play_open_horse_window, bench_read_play_open_horse_window);
 
-    packet_test_cases!(Packet578, PlayServerKeepAlive, PlayServerKeepAliveSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerKeepAlive, PlayServerKeepAliveSpec,
         test_play_server_keep_alive, bench_write_play_server_keep_alive, bench_read_play_server_keep_alive);
 
-    packet_test_cases!(Packet578, PlayChunkData, PlayChunkDataWrapper,
+    packet_test_cases!(RawPacket578, Packet578, PlayChunkData, PlayChunkDataWrapper,
         test_play_chunk_data, bench_write_play_chunk_data, bench_read_play_chunk_data);
 
-    packet_test_cases!(Packet578, PlayEffect, PlayEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEffect, PlayEffectSpec,
         test_play_effect, bench_write_play_effect, bench_read_play_effect);
 
-    packet_test_cases!(Packet578, PlayParticle, PlayParticleSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayParticle, PlayParticleSpec,
         test_play_particle, bench_write_play_particle, bench_read_play_particle);
 
-    packet_test_cases!(Packet578, PlayUpdateLight, PlayUpdateLightSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateLight, PlayUpdateLightSpec,
         test_play_update_light, bench_write_play_update_light, bench_read_play_update_light);
 
-    packet_test_cases!(Packet578, PlayJoinGame, PlayJoinGameSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayJoinGame, PlayJoinGameSpec,
         test_play_join_game, bench_write_play_join_game, bench_read_play_join_game);
 
-    packet_test_cases!(Packet578, PlayMapData, PlayMapDataSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayMapData, PlayMapDataSpec,
         test_play_map_data, bench_write_play_map_data, bench_read_play_map_data);
 
-    packet_test_cases!(Packet578, PlayTradeList, PlayTradeListSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTradeList, PlayTradeListSpec,
         test_play_trade_list, bench_write_play_trade_list, bench_read_play_trade_list);
 
-    packet_test_cases!(Packet578, PlayEntityPosition, PlayEntityPositionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityPosition, PlayEntityPositionSpec,
         test_play_entity_position, bench_write_play_entity_position, bench_read_play_entity_position);
 
-    packet_test_cases!(Packet578, PlayEntityPositionAndRotation, PlayEntityPositionAndRotationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityPositionAndRotation, PlayEntityPositionAndRotationSpec,
         test_play_entity_position_and_rotation, bench_write_play_entity_position_and_rotation, bench_read_play_entity_position_and_rotation);
 
-    packet_test_cases!(Packet578, PlayEntityRotation, PlayEntityRotationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityRotation, PlayEntityRotationSpec,
         test_play_entity_rotation, bench_write_play_entity_rotation, bench_read_play_entity_rotation);
 
-    packet_test_cases!(Packet578, PlayEntityMovement, PlayEntityMovementSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityMovement, PlayEntityMovementSpec,
         test_play_entity_movement, bench_write_play_entity_movement, bench_read_play_entity_movement);
 
-    packet_test_cases!(Packet578, PlayServerVehicleMove, PlayEntityVehicleMoveSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerVehicleMove, PlayEntityVehicleMoveSpec,
         test_play_server_vehicle_move, bench_write_play_server_vehicle_move, bench_read_play_server_vehicle_move);
 
-    packet_test_cases!(Packet578, PlayOpenBook, PlayOpenBookSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayOpenBook, PlayOpenBookSpec,
         test_play_open_book, bench_write_play_open_book, bench_read_play_open_book);
 
-    packet_test_cases!(Packet578, PlayOpenWindow, PlayOpenWindowSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayOpenWindow, PlayOpenWindowSpec,
         test_play_open_window, bench_write_play_open_window, bench_read_play_open_window);
 
-    packet_test_cases!(Packet578, PlayOpenSignEditor, PlayOpenSignEditorSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayOpenSignEditor, PlayOpenSignEditorSpec,
         test_play_open_sign_editor, bench_write_play_open_sign_editor, bench_read_play_open_sign_editor);
 
-    packet_test_cases!(Packet578, PlayCraftRecipeResponse, PlayCraftRecipeResponseSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayCraftRecipeResponse, PlayCraftRecipeResponseSpec,
         test_play_craft_recipe_response, bench_write_play_craft_recipe_response, bench_read_play_craft_recipe_response);
 
-    packet_test_cases!(Packet578, PlayServerPlayerAbilities, PlayServerPlayerAbilitiesSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerPlayerAbilities, PlayServerPlayerAbilitiesSpec,
         test_play_server_player_abilities, bench_write_play_server_player_abilities, bench_read_play_server_player_abilities);
 
-    packet_test_cases!(Packet578, PlayCombatEvent, PlayCombatEventSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayCombatEvent, PlayCombatEventSpec,
         test_play_combat_event, bench_write_play_combat_event, bench_read_play_combat_event);
 
-    packet_test_cases!(Packet578, PlayPlayerInfo, PlayPlayerInfoSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayPlayerInfo, PlayPlayerInfoSpec,
         test_play_player_info, bench_write_play_player_info, bench_read_play_player_info);
 
-    packet_test_cases!(Packet578, PlayFacePlayer, PlayFacePlayerSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayFacePlayer, PlayFacePlayerSpec,
         test_play_face_player, bench_write_play_face_player, bench_read_play_face_player);
 
-    packet_test_cases!(Packet578, PlayServerPlayerPositionAndLook, PlayServerPlayerPositionAndLookSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerPlayerPositionAndLook, PlayServerPlayerPositionAndLookSpec,
         test_play_server_player_position_and_look, bench_write_play_server_player_position_and_look, bench_read_play_server_player_position_and_look);
 
-    packet_test_cases!(Packet578, PlayUnlockRecipes, PlayUnlockRecipesSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUnlockRecipes, PlayUnlockRecipesSpec,
         test_play_unlock_recipes, bench_write_play_unlock_recipes, bench_read_play_unlock_recipes);
 
-    packet_test_cases!(Packet578, PlayDestroyEntities, PlayDestroyEntitiesSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayDestroyEntities, PlayDestroyEntitiesSpec,
         test_play_destroy_entities, bench_write_play_destroy_entities, bench_read_play_destroy_entities);
 
-    packet_test_cases!(Packet578, PlayRemoveEntityEffect, PlayRemoveEntityEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayRemoveEntityEffect, PlayRemoveEntityEffectSpec,
         test_play_remove_entity_effect, bench_write_play_remove_entity_effect, bench_read_play_remove_entity_effect);
 
-    packet_test_cases!(Packet578, PlayResourcePackSend, PlayResourcePackSendSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayResourcePackSend, PlayResourcePackSendSpec,
         test_play_resource_pack_send, bench_write_play_resource_pack_send, bench_read_play_resource_pack_send);
 
-    packet_test_cases!(Packet578, PlayRespawn, PlayRespawnSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayRespawn, PlayRespawnSpec,
         test_play_respawn, bench_write_play_respawn, bench_read_play_respawn);
 
-    packet_test_cases!(Packet578, PlayEntityHeadLook, PlayEntityHeadLookSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityHeadLook, PlayEntityHeadLookSpec,
         test_play_entity_head_look, bench_write_play_entity_head_look, bench_read_play_entity_head_look);
 
-    packet_test_cases!(Packet578, PlaySelectAdvancementTab, PlaySelectAdvancementTabSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySelectAdvancementTab, PlaySelectAdvancementTabSpec,
         test_play_select_advancement_tab, bench_write_play_select_advancement_tab, bench_read_play_select_advancement_tab);
 
-    packet_test_cases!(Packet578, PlayWorldBorder, PlayWorldBorderSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayWorldBorder, PlayWorldBorderSpec,
         test_play_world_border, bench_write_play_world_border, bench_read_play_world_border);
 
-    packet_test_cases!(Packet578, PlayCamera, PlayCameraSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayCamera, PlayCameraSpec,
         test_play_camera, bench_write_play_camera, bench_read_play_camera);
 
-    packet_test_cases!(Packet578, PlayServerHeldItemChange, PlayServerHeldItemChangeSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayServerHeldItemChange, PlayServerHeldItemChangeSpec,
         test_play_server_held_item_change, bench_write_play_server_held_item_change, bench_read_play_server_held_item_change);
 
-    packet_test_cases!(Packet578, PlayUpdateViewPosition, PlayUpdateViewPositionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateViewPosition, PlayUpdateViewPositionSpec,
         test_play_update_view_position, bench_write_play_update_view_position, bench_read_play_update_view_position);
 
-    packet_test_cases!(Packet578, PlayUpdateViewDistance, PlayUpdateViewDistanceSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateViewDistance, PlayUpdateViewDistanceSpec,
         test_play_update_view_distance, bench_write_play_update_view_distance, bench_read_play_update_view_distance);
 
-    packet_test_cases!(Packet578, PlayDisplayScoreboard, PlayDisplayScoreboardSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayDisplayScoreboard, PlayDisplayScoreboardSpec,
         test_play_display_scoreboard, bench_write_play_display_scoreboard, bench_read_play_display_scoreboard);
 
-    packet_test_cases!(Packet578, PlayEntityMetadata, PlayEntityMetadataSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityMetadata, PlayEntityMetadataSpec,
         test_play_entity_metadata, bench_write_play_entity_metadata, bench_read_play_entity_metadata);
 
-    packet_test_cases!(Packet578, PlayAttachEntity, PlayAttachEntitySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayAttachEntity, PlayAttachEntitySpec,
         test_play_attach_entity, bench_write_play_attach_entity, bench_read_play_attach_entity);
 
-    packet_test_cases!(Packet578, PlayEntityVelocity, PlayEntityVelocitySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityVelocity, PlayEntityVelocitySpec,
         test_play_entity_velocity, bench_write_play_entity_velocity, bench_read_play_entity_velocity);
 
-    packet_test_cases!(Packet578, PlayEntityEquipment, PlayEntityEquiptmentSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityEquipment, PlayEntityEquiptmentSpec,
         test_play_entity_equipment, bench_write_play_entity_equipment, bench_read_play_entity_equipment);
 
-    packet_test_cases!(Packet578, PlaySetExperience, PlaySetExperienceSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySetExperience, PlaySetExperienceSpec,
         test_play_set_experience, bench_write_play_set_experience, bench_read_play_set_experience);
 
-    packet_test_cases!(Packet578, PlayUpdatehealth, PlayUpdateHealthSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdatehealth, PlayUpdateHealthSpec,
         test_play_updatehealth, bench_write_play_updatehealth, bench_read_play_updatehealth);
 
-    packet_test_cases!(Packet578, PlayScoreboardObjective, PlayScoreboardObjectiveSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayScoreboardObjective, PlayScoreboardObjectiveSpec,
         test_play_scoreboard_objective, bench_write_play_scoreboard_objective, bench_read_play_scoreboard_objective);
 
-    packet_test_cases!(Packet578, PlaySetPassengers, PlaySetPassengersSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySetPassengers, PlaySetPassengersSpec,
         test_play_set_passengers, bench_write_play_set_passengers, bench_read_play_set_passengers);
 
-    packet_test_cases!(Packet578, PlayTeams, PlayTeamsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTeams, PlayTeamsSpec,
         test_play_teams, bench_write_play_teams, bench_read_play_teams);
 
-    packet_test_cases!(Packet578, PlayUpdateScore, PlayUpdateScoreSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateScore, PlayUpdateScoreSpec,
         test_play_update_score, bench_write_play_update_score, bench_read_play_update_score);
 
-    packet_test_cases!(Packet578, PlaySpawnPosition, PlaySpawnPositionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpawnPosition, PlaySpawnPositionSpec,
         test_play_spawn_position, bench_write_play_spawn_position, bench_read_play_spawn_position);
 
-    packet_test_cases!(Packet578, PlayTimeUpdate, PlayTimeUpdateSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTimeUpdate, PlayTimeUpdateSpec,
         test_play_time_update, bench_write_play_time_update, bench_read_play_time_update);
 
-    packet_test_cases!(Packet578, PlayTitle, PlayTitleSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTitle, PlayTitleSpec,
         test_play_title, bench_write_play_title, bench_read_play_title);
 
-    packet_test_cases!(Packet578, PlayEntitySoundEffect, PlayEntitySoundEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntitySoundEffect, PlayEntitySoundEffectSpec,
         test_play_entity_sound_effect, bench_write_play_entity_sound_effect, bench_read_play_entity_sound_effect);
 
-    packet_test_cases!(Packet578, PlaySoundEffect, PlaySoundEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySoundEffect, PlaySoundEffectSpec,
         test_play_sound_effect, bench_write_play_sound_effect, bench_read_play_sound_effect);
 
-    packet_test_cases!(Packet578, PlayStopSound, PlayStopSoundSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayStopSound, PlayStopSoundSpec,
         test_play_stop_sound, bench_write_play_stop_sound, bench_read_play_stop_sound);
 
-    packet_test_cases!(Packet578, PlayerPlayerListHeaderAndFooter, PlayPlayerListHeaderAndFooterSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayerPlayerListHeaderAndFooter, PlayPlayerListHeaderAndFooterSpec,
         test_player_player_list_header_and_footer, bench_write_player_player_list_header_and_footer, bench_read_player_player_list_header_and_footer);
 
-    packet_test_cases!(Packet578, PlayNbtQueryResponse, PlayNbtQueryResponseSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayNbtQueryResponse, PlayNbtQueryResponseSpec,
         test_play_nbt_query_response, bench_write_play_nbt_query_response, bench_read_play_nbt_query_response);
 
-    packet_test_cases!(Packet578, PlayCollectItem, PlayCollectItemSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayCollectItem, PlayCollectItemSpec,
         test_play_collect_item, bench_write_play_collect_item, bench_read_play_collect_item);
 
-    packet_test_cases!(Packet578, PlayEntityTeleport, PlayEntityTeleportSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityTeleport, PlayEntityTeleportSpec,
         test_play_entity_teleport, bench_write_play_entity_teleport, bench_read_play_entity_teleport);
 
-    packet_test_cases!(Packet578, PlayAdvancements, PlayAdvancementsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayAdvancements, PlayAdvancementsSpec,
         test_play_advancements, bench_write_play_advancements, bench_read_play_advancements);
 
-    packet_test_cases!(Packet578, PlayEntityProperties, PlayEntityPropertiesSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityProperties, PlayEntityPropertiesSpec,
         test_play_entity_properties, bench_write_play_entity_properties, bench_read_play_entity_properties);
 
-    packet_test_cases!(Packet578, PlayEntityEffect, PlayEntityEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityEffect, PlayEntityEffectSpec,
         test_play_entity_effect, bench_write_play_entity_effect, bench_read_play_entity_effect);
 
-    packet_test_cases!(Packet578, PlayDeclareRecipes, PlayDeclareRecipesSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayDeclareRecipes, PlayDeclareRecipesSpec,
         test_play_declare_recipes, bench_write_play_declare_recipes, bench_read_play_declare_recipes);
 
-    packet_test_cases!(Packet578, PlayTags, PlayTagsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTags, PlayTagsSpec,
         test_play_tags, bench_write_play_tags, bench_read_play_tags);
 
-    packet_test_cases!(Packet578, PlayTeleportConfirm, PlayTeleportConfirmSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayTeleportConfirm, PlayTeleportConfirmSpec,
         test_play_teleport_confirm, bench_write_play_teleport_confirm, bench_read_play_teleport_confirm);
 
-    packet_test_cases!(Packet578, PlayQueryBlockNbt, PlayQueryBlockNbtSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayQueryBlockNbt, PlayQueryBlockNbtSpec,
         test_play_query_block_nbt, bench_write_play_query_block_nbt, bench_read_play_query_block_nbt);
 
-    packet_test_cases!(Packet578, PlayQueryEntityNbt, PlayQueryEntityNbtSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayQueryEntityNbt, PlayQueryEntityNbtSpec,
         test_play_query_entity_nbt, bench_write_play_query_entity_nbt, bench_read_play_query_entity_nbt);
 
-    packet_test_cases!(Packet578, PlaySetDifficulty, PlaySetDifficultySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySetDifficulty, PlaySetDifficultySpec,
         test_play_set_difficulty, bench_write_play_set_difficulty, bench_read_play_set_difficulty);
 
-    packet_test_cases!(Packet578, PlayClientChatMessage, PlayClientChatMessageSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientChatMessage, PlayClientChatMessageSpec,
         test_play_client_chat_message, bench_write_play_client_chat_message, bench_read_play_client_chat_message);
 
-    packet_test_cases!(Packet578, PlayClientStatus, PlayClientStatusSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientStatus, PlayClientStatusSpec,
         test_play_client_status, bench_write_play_client_status, bench_read_play_client_status);
 
-    packet_test_cases!(Packet578, PlayClientSettings, PlayClientSettingsSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientSettings, PlayClientSettingsSpec,
         test_play_client_settings, bench_write_play_client_settings, bench_read_play_client_settings);
 
-    packet_test_cases!(Packet578, PlayClientTabComplete, PlayClientTabCompleteSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientTabComplete, PlayClientTabCompleteSpec,
         test_play_client_tab_complete, bench_write_play_client_tab_complete, bench_read_play_client_tab_complete);
 
-    packet_test_cases!(Packet578, PlayClientWindowConfirmation, PlayClientWindowConfirmationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientWindowConfirmation, PlayClientWindowConfirmationSpec,
         test_play_client_window_confirmation, bench_write_play_client_window_confirmation, bench_read_play_client_window_confirmation);
 
-    packet_test_cases!(Packet578, PlayClickWindowButton, PlayClickWindowButtonSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClickWindowButton, PlayClickWindowButtonSpec,
         test_play_click_window_button, bench_write_play_click_window_button, bench_read_play_click_window_button);
 
-    packet_test_cases!(Packet578, PlayClickWindow, PlayClickWindowSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClickWindow, PlayClickWindowSpec,
         test_play_click_window, bench_write_play_click_window, bench_read_play_click_window);
 
-    packet_test_cases!(Packet578, PlayClientCloseWindow, PlayClientCloseWindowSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientCloseWindow, PlayClientCloseWindowSpec,
         test_play_client_close_window, bench_write_play_client_close_window, bench_read_play_client_close_window);
 
-    packet_test_cases!(Packet578, PlayClientPluginMessage, PlayClientPluginMessageSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientPluginMessage, PlayClientPluginMessageSpec,
         test_play_client_plugin_message, bench_write_play_client_plugin_message, bench_read_play_client_plugin_message);
 
-    packet_test_cases!(Packet578, PlayEditBook, PlayEditBookSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEditBook, PlayEditBookSpec,
         test_play_edit_book, bench_write_play_edit_book, bench_read_play_edit_book);
 
-    packet_test_cases!(Packet578, PlayInteractEntity, PlayInteractEntitySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayInteractEntity, PlayInteractEntitySpec,
         test_play_interact_entity, bench_write_play_interact_entity, bench_read_play_interact_entity);
 
-    packet_test_cases!(Packet578, PlayClientKeepAlive, PlayClientKeepAliveSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientKeepAlive, PlayClientKeepAliveSpec,
         test_play_client_keep_alive, bench_write_play_client_keep_alive, bench_read_play_client_keep_alive);
 
-    packet_test_cases!(Packet578, PlayLockDifficulty, PlayLockDifficultySpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayLockDifficulty, PlayLockDifficultySpec,
         test_play_lock_difficulty, bench_write_play_lock_difficulty, bench_read_play_lock_difficulty);
 
-    packet_test_cases!(Packet578, PlayPlayerPosition, PlayPlayerPositionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayPlayerPosition, PlayPlayerPositionSpec,
         test_play_player_position, bench_write_play_player_position, bench_read_play_player_position);
 
-    packet_test_cases!(Packet578, PlayClientPlayerPositionAndRotation, PlayClientPlayerPositionAndRotationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientPlayerPositionAndRotation, PlayClientPlayerPositionAndRotationSpec,
         test_play_client_player_position_and_rotation, bench_write_play_client_player_position_and_rotation, bench_read_play_client_player_position_and_rotation);
 
-    packet_test_cases!(Packet578, PlayPlayerRotation, PlayPlayerRotationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayPlayerRotation, PlayPlayerRotationSpec,
         test_play_player_rotation, bench_write_play_player_rotation, bench_read_play_player_rotation);
 
-    packet_test_cases!(Packet578, PlayPlayerMovement, PlayPlayerMovementSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayPlayerMovement, PlayPlayerMovementSpec,
         test_play_player_movement, bench_write_play_player_movement, bench_read_play_player_movement);
 
-    packet_test_cases!(Packet578, PlayClientVehicleMove, PlayClientVehicleMoveSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientVehicleMove, PlayClientVehicleMoveSpec,
         test_play_client_vehicle_move, bench_write_play_client_vehicle_move, bench_read_play_client_vehicle_move);
 
-    packet_test_cases!(Packet578, PlaySteerBoat, PlaySteerBoatSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySteerBoat, PlaySteerBoatSpec,
         test_play_steer_boat, bench_write_play_steer_boat, bench_read_play_steer_boat);
 
-    packet_test_cases!(Packet578, PlayPickItem, PlayPickItemSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayPickItem, PlayPickItemSpec,
         test_play_pick_item, bench_write_play_pick_item, bench_read_play_pick_item);
 
-    packet_test_cases!(Packet578, PlayCraftRecipeRequest, PlayCraftRecipeRequestSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayCraftRecipeRequest, PlayCraftRecipeRequestSpec,
         test_play_craft_recipe_request, bench_write_play_craft_recipe_request, bench_read_play_craft_recipe_request);
 
-    packet_test_cases!(Packet578, PlayClientPlayerAbilities, PlayClientPlayerAbilitiesSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientPlayerAbilities, PlayClientPlayerAbilitiesSpec,
         test_play_client_player_abilities, bench_write_play_client_player_abilities, bench_read_play_client_player_abilities);
 
-    packet_test_cases!(Packet578, PlayPlayerDigging, PlayPlayerDiggingSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayPlayerDigging, PlayPlayerDiggingSpec,
         test_play_player_digging, bench_write_play_player_digging, bench_read_play_player_digging);
 
-    packet_test_cases!(Packet578, PlayEntityAction, PlayEntityActionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayEntityAction, PlayEntityActionSpec,
         test_play_entity_action, bench_write_play_entity_action, bench_read_play_entity_action);
 
-    packet_test_cases!(Packet578, PlaySteerVehicle, PlaySteerVehicleSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySteerVehicle, PlaySteerVehicleSpec,
         test_play_steer_vehicle, bench_write_play_steer_vehicle, bench_read_play_steer_vehicle);
 
-    packet_test_cases!(Packet578, PlayRecipeBookData, PlayRecipeBookDataSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayRecipeBookData, PlayRecipeBookDataSpec,
         test_play_recipe_book_data, bench_write_play_recipe_book_data, bench_read_play_recipe_book_data);
 
-    packet_test_cases!(Packet578, PlayNameItem, PlayNameItemSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayNameItem, PlayNameItemSpec,
         test_play_name_item, bench_write_play_name_item, bench_read_play_name_item);
 
-    packet_test_cases!(Packet578, PlayResourcePackStatus, PlayResourcePackStatusSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayResourcePackStatus, PlayResourcePackStatusSpec,
         test_play_resource_pack_status, bench_write_play_resource_pack_status, bench_read_play_resource_pack_status);
 
-    packet_test_cases!(Packet578, PlayAdvancementTab, PlayAdvancementTabSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayAdvancementTab, PlayAdvancementTabSpec,
         test_play_advancement_tab, bench_write_play_advancement_tab, bench_read_play_advancement_tab);
 
-    packet_test_cases!(Packet578, PlaySelectTrade, PlaySelectTradeSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySelectTrade, PlaySelectTradeSpec,
         test_play_select_trade, bench_write_play_select_trade, bench_read_play_select_trade);
 
-    packet_test_cases!(Packet578, PlaySetBeaconEffect, PlaySetBeaconEffectSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySetBeaconEffect, PlaySetBeaconEffectSpec,
         test_play_set_beacon_effect, bench_write_play_set_beacon_effect, bench_read_play_set_beacon_effect);
 
-    packet_test_cases!(Packet578, PlayClientHeldItemChange, PlayClientHeldItemChangeSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientHeldItemChange, PlayClientHeldItemChangeSpec,
         test_play_client_held_item_change, bench_write_play_client_held_item_change, bench_read_play_client_held_item_change);
 
-    packet_test_cases!(Packet578, PlayUpdateCommandBlock, PlayUpdateCommandBlockSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateCommandBlock, PlayUpdateCommandBlockSpec,
         test_play_update_command_block, bench_write_play_update_command_block, bench_read_play_update_command_block);
 
-    packet_test_cases!(Packet578, PlayUpdateCommandBlockMinecart, PlayUpdateCommandBlockMinecartSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateCommandBlockMinecart, PlayUpdateCommandBlockMinecartSpec,
         test_play_update_command_block_minecart, bench_write_play_update_command_block_minecart, bench_read_play_update_command_block_minecart);
 
-    packet_test_cases!(Packet578, PlayCreativeInventoryAction, PlayCreativeInventoryActionSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayCreativeInventoryAction, PlayCreativeInventoryActionSpec,
         test_play_creative_inventory_action, bench_write_play_creative_inventory_action, bench_read_play_creative_inventory_action);
 
-    packet_test_cases!(Packet578, PlayUpdateJigsawBlock, PlayUpdateJigsawBlockSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateJigsawBlock, PlayUpdateJigsawBlockSpec,
         test_play_update_jigsaw_block, bench_write_play_update_jigsaw_block, bench_read_play_update_jigsaw_block);
 
-    packet_test_cases!(Packet578, PlayUpdateStructureBlock, PlayUpdateStructureBlockSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateStructureBlock, PlayUpdateStructureBlockSpec,
         test_play_update_structure_block, bench_write_play_update_structure_block, bench_read_play_update_structure_block);
 
-    packet_test_cases!(Packet578, PlayUpdateSign, PlayUpdateSignSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUpdateSign, PlayUpdateSignSpec,
         test_play_update_sign, bench_write_play_update_sign, bench_read_play_update_sign);
 
-    packet_test_cases!(Packet578, PlayClientAnimation, PlayClientAnimationSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayClientAnimation, PlayClientAnimationSpec,
         test_play_client_animation, bench_write_play_client_animation, bench_read_play_client_animation);
 
-    packet_test_cases!(Packet578, PlaySpectate, PlaySpectateSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlaySpectate, PlaySpectateSpec,
         test_play_spectate, bench_write_play_spectate, bench_read_play_spectate);
 
-    packet_test_cases!(Packet578, PlayBlockPlacement, PlayBlockPlacementSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayBlockPlacement, PlayBlockPlacementSpec,
         test_play_block_placement, bench_write_play_block_placement, bench_read_play_block_placement);
 
-    packet_test_cases!(Packet578, PlayUseItem, PlayUseItemSpec,
+    packet_test_cases!(RawPacket578, Packet578, PlayUseItem, PlayUseItemSpec,
         test_play_use_item, bench_write_play_use_item, bench_read_play_use_item);
 
     // trust me, this is some cutting edge shit
@@ -3508,7 +3504,7 @@ pub mod tests {
     fn test_generate_test_cases() {
         Packet578::describe().packets.iter().map(move |packet| {
             let snake_case = to_snake_case(packet.name.clone());
-            alloc::format!("packet_test_cases!(Packet578, {}, {},\n        test_{}, bench_write_{}, bench_read_{});\n",
+            alloc::format!("packet_test_cases!(RawPacket578, Packet578, {}, {},\n        test_{}, bench_write_{}, bench_read_{});\n",
                     packet.name, packet.body_struct, snake_case, snake_case, snake_case).to_owned()
         }).for_each(move |line| {
             println!("{}", line)

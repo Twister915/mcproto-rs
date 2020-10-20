@@ -87,15 +87,30 @@ pub struct ProtocolPacketField {
     pub kind: String,
 }
 
-pub trait Packet: Sized {
+pub trait HasPacketId {
+
     fn id(&self) -> Id;
 
     fn version() -> crate::types::VarInt;
+}
 
-    fn mc_deserialize(raw: RawPacket<'_>) -> Result<Self, PacketErr>;
+pub trait HasPacketBody {
 
     fn mc_serialize_body<S>(&self, to: &mut S) -> SerializeResult where S: Serializer;
 }
+
+pub trait RawPacket<'a>: HasPacketId + Sized {
+
+    type Packet: Packet;
+
+    fn create(id: Id, data: &'a [u8]) -> Result<Self, PacketErr>;
+
+    fn data(&self) -> &'a [u8];
+
+    fn deserialize(&self) -> Result<Self::Packet, PacketErr>;
+}
+
+pub trait Packet: HasPacketId + HasPacketBody + Sized {}
 
 pub enum PacketErr {
     UnknownId(Id),
@@ -127,12 +142,6 @@ impl fmt::Debug for PacketErr {
 
 #[cfg(feature = "std")]
 impl std::error::Error for PacketErr {}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct RawPacket<'a> {
-    pub id: Id,
-    pub data: &'a [u8],
-}
 
 pub trait ProtocolType: Serialize + Deserialize {}
 
@@ -247,7 +256,7 @@ macro_rules! define_protocol {
             }
         }
 
-        impl crate::protocol::Packet for $packett {
+        impl crate::protocol::HasPacketId for $packett {
             fn version() -> crate::types::VarInt {
                 crate::types::VarInt($version)
             }
@@ -261,32 +270,9 @@ macro_rules! define_protocol {
                     $($nam(_) => ($id, $state, $direction)),*
                 }.into()
             }
+        }
 
-            fn mc_deserialize(raw: crate::protocol::RawPacket) ->
-                Result<Self, crate::protocol::PacketErr>
-            {
-                use self::$packett::*;
-                use crate::protocol::State::*;
-                use crate::protocol::PacketDirection::*;
-                use crate::protocol::PacketErr::*;
-                use crate::{Deserialize, Deserialized};
-
-                let id = raw.id;
-                let data = raw.data;
-
-                match (id.id, id.state, id.direction) {
-                    $(($id, $state, $direction) => {
-                        let Deserialized { value: body, data: rest } = $body::mc_deserialize(data).map_err(DeserializeFailed)?;
-                        if !rest.is_empty() {
-                            Err(ExtraData(rest.to_vec()))
-                        } else {
-                            Ok($nam(body))
-                        }
-                    }),*,
-                    other => Err(UnknownId(other.into())),
-                }
-            }
-
+        impl crate::protocol::HasPacketBody for $packett {
             fn mc_serialize_body<S>(&self, to: &mut S) -> crate::SerializeResult where S: crate::Serializer {
                 use self::$packett::*;
                 match self {
@@ -294,6 +280,8 @@ macro_rules! define_protocol {
                 }
             }
         }
+
+        impl crate::protocol::Packet for $packett {}
 
         impl $packett {
             pub fn describe() -> crate::protocol::ProtocolSpec {
@@ -318,59 +306,8 @@ macro_rules! define_protocol {
             }
         }
 
-        #[cfg(feature = "std")]
-        impl<'a> std::convert::TryFrom<crate::protocol::RawPacket<'a>> for $rawpackett<'a> {
-            type Error = crate::protocol::PacketErr;
-
-            fn try_from(value: crate::protocol::RawPacket<'a>) -> Result<Self, Self::Error> {
-                use self::$rawpackett::*;
-                use crate::protocol::State::*;
-                use crate::protocol::PacketDirection::*;
-                use crate::protocol::PacketErr::*;
-                #[cfg(feature = "std")]
-                use std::marker;
-                #[cfg(not(feature = "std"))]
-                use no_std_compat::marker;
-
-                match (value.id.id, value.id.state, value.id.direction) {
-                    $(($id, $state, $direction) => Ok($nam($rawdt {
-                        data: value.data,
-                        _typ: marker::PhantomData,
-                    }))),*,
-                    other => Err(UnknownId(other.into()))
-                }
-            }
-        }
-
-        #[cfg(feature = "std")]
-        impl<'a> std::convert::Into<crate::protocol::RawPacket<'a>> for $rawpackett<'a> {
-            fn into(self) -> crate::protocol::RawPacket<'a> {
-                self.into_raw_packet()
-            }
-        }
-
-        impl<'a> $rawpackett<'a> {
-            fn into_raw_packet(self) -> crate::protocol::RawPacket<'a> {
-                crate::protocol::RawPacket {
-                    id: self.id(),
-                    data: self.bytes(),
-                }
-            }
-        }
-
-        #[cfg(feature = "std")]
-        impl<'a> std::convert::Into<&'a [u8]> for $rawpackett<'a> {
-            fn into(self) -> &'a [u8] {
-                use self::$rawpackett::*;
-
-                match self {
-                    $($nam(bod) => bod.data),*
-                }
-            }
-        }
-
-        impl<'a> $rawpackett<'a> {
-            pub fn id(&self) -> crate::protocol::Id {
+        impl<'a> crate::protocol::HasPacketId for $rawpackett<'a> {
+            fn id(&self) -> crate::protocol::Id {
                 use self::$rawpackett::*;
                 use crate::protocol::State::*;
                 use crate::protocol::PacketDirection::*;
@@ -380,16 +317,52 @@ macro_rules! define_protocol {
                 }.into()
             }
 
-            pub fn deserialize(self) -> Result<$packett, crate::protocol::PacketErr> {
-                use crate::protocol::Packet;
-                $packett::mc_deserialize(self.into_raw_packet())
+            fn version() -> crate::types::VarInt {
+                crate::types::VarInt($version)
+            }
+        }
+
+        impl<'a> crate::protocol::RawPacket<'a> for $rawpackett<'a> {
+
+            type Packet = $packett;
+
+            fn create(id: crate::protocol::Id, data: &'a[u8]) -> Result<Self, crate::protocol::PacketErr> {
+                use self::$rawpackett::*;
+                use crate::protocol::State::*;
+                use crate::protocol::PacketDirection::*;
+                use crate::protocol::PacketErr::UnknownId;
+
+                match (id.id, id.state, id.direction) {
+                    $(($id, $state, $direction) => Ok($nam($rawdt{
+                        data,
+                        _typ: core::marker::PhantomData,
+                    }))),*,
+                    other => Err(UnknownId(other.into()))
+                }
             }
 
-            pub fn bytes(&self) -> &'a [u8] {
+            fn data(&self) -> &'a [u8] {
                 use self::$rawpackett::*;
 
                 match self {
                     $($nam(bod) => bod.data),*
+                }
+            }
+
+            fn deserialize(&self) -> Result<Self::Packet, crate::protocol::PacketErr> {
+                use crate::protocol::PacketErr::{ExtraData, DeserializeFailed};
+
+                match self {
+                    $($rawpackett::$nam(bod) => {
+                        let Deserialized { value: body, data: rest } =
+                            $body::mc_deserialize(bod.data)
+                                .map_err(move |err| DeserializeFailed(err))?;
+                        if !rest.is_empty() {
+                            Err(ExtraData(rest.to_vec()))
+                        } else {
+                            Ok($packett::$nam(body))
+                        }
+                    }),*,
                 }
             }
         }

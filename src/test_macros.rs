@@ -1,24 +1,21 @@
 #[cfg(all(test, feature = "std"))]
 #[macro_export]
 macro_rules! packet_test_cases {
-    ($pnam: ident, $varnam: ident, $bodnam: ident, $testnam: ident, $benchnams: ident, $benchnamd: ident) => {
+    ($rawnam: ident, $pnam: ident, $varnam: ident, $bodnam: ident, $testnam: ident, $benchnams: ident, $benchnamd: ident) => {
         #[test]
         fn $testnam() {
+            use crate::protocol::{RawPacket, HasPacketBody, HasPacketId};
             for k in 0..50 {
                 let packet = $pnam::$varnam($bodnam::test_gen_random());
                 if k == 0 {
                     println!("{:?}", packet);
                 }
-                let mut out = BytesSerializer::default();
+                let mut out = crate::types::BytesSerializer::default();
                 packet.mc_serialize_body(&mut out).expect("serialize succeeds");
                 let bytes = out.into_bytes();
 
-                let raw_packet = RawPacket {
-                    id: packet.id(),
-                    data: bytes.as_slice(),
-                };
-
-                let deserialized = match <$pnam>::mc_deserialize(raw_packet) {
+                let raw_packet = $rawnam::create(packet.id(), bytes.as_slice()).expect("valid id");
+                let deserialized = match raw_packet.deserialize() {
                     Err(err) => {
                         eprintln!("expected: {:?}", packet);
                         panic!("error: {:?}", err);
@@ -33,8 +30,9 @@ macro_rules! packet_test_cases {
         #[cfg(feature = "bench")]
         #[bench]
         fn $benchnams(b: &mut test::Bencher) {
+            use crate::protocol::{HasPacketBody};
             let packet = $pnam::$varnam($bodnam::test_gen_random());
-            let mut serializer = BenchSerializer::default();
+            let mut serializer = crate::test_macros::BenchSerializer::default();
             packet
                 .mc_serialize_body(&mut serializer)
                 .expect("serialize succeeds");
@@ -52,20 +50,18 @@ macro_rules! packet_test_cases {
         #[cfg(feature = "bench")]
         #[bench]
         fn $benchnamd(b: &mut test::Bencher) {
+            use crate::protocol::{RawPacket, HasPacketBody, HasPacketId};
             let packet = $pnam::$varnam($bodnam::test_gen_random());
-            let mut serializer = BytesSerializer::default();
+            let mut serializer = crate::types::BytesSerializer::default();
             packet
                 .mc_serialize_body(&mut serializer)
                 .expect("serialize succeeds");
 
             let bytes = serializer.into_bytes();
             b.bytes = bytes.len() as u64;
-            let raw_packet = RawPacket {
-                id: packet.id(),
-                data: bytes.as_slice(),
-            };
+            let raw_packet = $rawnam::create(packet.id(), bytes.as_slice()).expect("valid id");
             b.iter(|| {
-                $pnam::mc_deserialize(raw_packet.clone()).expect("deserialize succeeds");
+                raw_packet.deserialize().expect("deserialize succeeds");
             })
         }
     };
