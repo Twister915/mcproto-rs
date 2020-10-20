@@ -2979,7 +2979,7 @@ impl Deserialize for EntityMetadata {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 impl TestRandom for EntityMetadata {
     fn test_gen_random() -> Self {
         let n_fields = rand::random::<usize>() % 10;
