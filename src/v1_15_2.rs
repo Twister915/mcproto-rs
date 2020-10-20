@@ -471,7 +471,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayEntityMetadata, 0x44, Play, ClientBound => PlayEntityMetadataSpec {
         entity_id: VarInt,
-        metadata_raw: RemainingBytes
+        metadata: EntityMetadata
     },
     PlayAttachEntity, 0x45, Play, ClientBound => PlayAttachEntitySpec {
         attached_entity_id: i32,
@@ -2939,6 +2939,252 @@ impl TestRandom for LightingUpdateSpec {
         }
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct EntityMetadata {
+    pub fields: Vec<EntityMetadataField>
+}
+
+impl Serialize for EntityMetadata {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        for field in &self.fields {
+            to.serialize_byte(field.index)?;
+            to.serialize_other(&field.data)?;
+        }
+        to.serialize_byte(0xFF)
+    }
+}
+
+impl Deserialize for EntityMetadata {
+    fn mc_deserialize(mut data: &[u8]) -> DeserializeResult<'_, Self> {
+        let mut fields = Vec::new();
+        loop {
+            let Deserialized { value: index, data: rest } = u8::mc_deserialize(data)?;
+            data = rest;
+            if index == 0xFF {
+                break;
+            }
+
+            let Deserialized { value: field, data: rest } = EntityMetadataFieldData::mc_deserialize(data)?;
+            data = rest;
+            fields.push(EntityMetadataField{
+                index,
+                data: field,
+            });
+        }
+
+        Deserialized::ok(Self{
+            fields,
+        }, data)
+    }
+}
+
+#[cfg(test)]
+impl TestRandom for EntityMetadata {
+    fn test_gen_random() -> Self {
+        let n_fields = rand::random::<usize>() % 10;
+        let mut fields = Vec::with_capacity(n_fields);
+        for i in 0..n_fields {
+            fields.push(EntityMetadataField{
+                index: i as u8,
+                data: EntityMetadataFieldData::test_gen_random(),
+            });
+        }
+
+        Self {
+            fields,
+        }
+    }
+}
+
+impl EntityMetadata {
+    pub fn set(&mut self, index: u8, data: EntityMetadataFieldData) {
+        for field in &mut self.fields {
+            if field.index == index {
+                field.data = data;
+                return;
+            }
+        }
+
+        self.fields.push(EntityMetadataField{
+            index,
+            data,
+        })
+    }
+
+    pub fn get(&self, index: u8) -> Option<&EntityMetadataFieldData> {
+        for field in &self.fields {
+            if field.index == index {
+                return Some(&field.data);
+            }
+        }
+
+        None
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EntityMetadataField {
+    pub index: u8,
+    pub data: EntityMetadataFieldData
+}
+
+proto_varint_enum!(EntityMetadataFieldData,
+    0x00 :: Byte(i8),
+    0x01 :: VarInt(VarInt),
+    0x02 :: Float(f32),
+    0x03 :: String(String),
+    0x04 :: Chat(Chat),
+    0x05 :: OptChat(Option<Chat>),
+    0x06 :: Slot(Option<Slot>),
+    0x07 :: Boolean(bool),
+    0x08 :: Rotation(EntityRotation),
+    0x09 :: Position(IntPosition),
+    0x0A :: OptPosition(Option<IntPosition>),
+    0x0B :: Direction(EntityDirection),
+    0x0C :: OptUUID(Option<UUID4>),
+    0x0D :: OptBlockId(VarInt),
+    0x0E :: NBT(NamedNbtTag),
+    0x0F :: Particle(ParticleSpec),
+    0x10 :: VillagerData(EntityVillagerData),
+    0x11 :: OptVarInt(VarInt),
+    0x12 :: Pose(EntityPose)
+);
+
+__protocol_body_def_helper!(EntityRotation {
+    x: f32,
+    y: f32,
+    z: f32
+});
+
+proto_varint_enum!(EntityDirection,
+    0x00 :: Down,
+    0x01 :: Up,
+    0x02 :: North,
+    0x03 :: South,
+    0x04 :: West,
+    0x05 :: East
+);
+
+__protocol_body_def_helper!(EntityVillagerData {
+    villager_type: VillagerType,
+    villager_profession: VillagerProfession,
+    level: VarInt
+});
+
+proto_varint_enum!(VillagerType,
+    0x00 :: Desert,
+    0x01 :: Jungle,
+    0x02 :: Plains,
+    0x03 :: Savanna,
+    0x04 :: Snow,
+    0x05 :: Swamp,
+    0x06 :: Taiga
+);
+
+proto_varint_enum!(VillagerProfession,
+    0x00 :: None,
+    0x01 :: Armorer,
+    0x02 :: Butcher,
+    0x03 :: Cartographer,
+    0x04 :: Cleric,
+    0x05 :: Farmer,
+    0x06 :: Fisherman,
+    0x07 :: Fletcher,
+    0x08 :: LeatherWorker,
+    0x09 :: Librarian,
+    0x0A :: Mason,
+    0x0B :: Nitwit,
+    0x0C :: Shepherd,
+    0x0D :: Toolsmith,
+    0x0E :: Weaponsmith
+);
+
+proto_varint_enum!(EntityPose,
+    0x00 :: Standing,
+    0x01 :: FallFlying,
+    0x02 :: Sleeping,
+    0x03 :: Swimming,
+    0x04 :: SpinAttack,
+    0x05 :: Sneaking,
+    0x06 :: Dying
+);
+
+proto_varint_enum!(ParticleSpec,
+    0x00 :: AmbientEntityEffect,
+    0x01 :: AngryVillager,
+    0x02 :: Barrier,
+    0x03 :: Block(BlockParticleData),
+    0x04 :: Bubble,
+    0x05 :: Cloud,
+    0x06 :: Crit,
+    0x07 :: DamageIndicator,
+    0x08 :: DragonBreath,
+    0x09 :: DrippingLava,
+    0x0A :: FallingLava,
+    0x0B :: LandingLava,
+    0x0C :: DrippingWater,
+    0x0D :: FallingWater,
+    0x0E :: Dust(DustParticleData),
+    0x0F :: Effect,
+    0x10 :: ElderGuardian,
+    0x11 :: EnchantedHit,
+    0x12 :: Enchant,
+    0x13 :: EndRod,
+    0x14 :: EntityEffect,
+    0x15 :: ExposionEmitter,
+    0x16 :: Explosion,
+    0x17 :: FallingDust(DustParticleData),
+    0x18 :: Firework,
+    0x19 :: Fishing,
+    0x1A :: Flame,
+    0x1B :: Flash,
+    0x1C :: HappyVillager,
+    0x1D :: Composter,
+    0x1E :: Heart,
+    0x1F :: InstantEffect,
+    0x20 :: Item(Option<Slot>),
+    0x21 :: ItemSlime,
+    0x22 :: ItemSnowball,
+    0x23 :: LargeSmoke,
+    0x24 :: Lava,
+    0x25 :: Mycelium,
+    0x26 :: Note,
+    0x27 :: Poof,
+    0x28 :: Portal,
+    0x29 :: Rain,
+    0x2A :: Smoke,
+    0x2B :: Sneeze,
+    0x2C :: Spit,
+    0x2D :: SquidInk,
+    0x2E :: SweepAttack,
+    0x2F :: TotemOfUndying,
+    0x30 :: Underwater,
+    0x31 :: Splash,
+    0x32 :: Witch,
+    0x33 :: BubblePop,
+    0x34 :: CurrentDown,
+    0x35 :: BubbleColumnUp,
+    0x36 :: Nautilus,
+    0x37 :: Dolphin,
+    0x38 :: CampfireCosySmoke,
+    0x39 :: CampfireSignalSmoke,
+    0x3A :: DrippingHoney,
+    0x3B :: FallingHoney,
+    0x3C :: LandingHoney,
+    0x3D :: FallingNectar
+);
+
+__protocol_body_def_helper!(BlockParticleData {
+    block_state: VarInt
+});
+
+__protocol_body_def_helper!(DustParticleData {
+    red: f32,
+    green: f32,
+    blue: f32,
+    scale: f32
+});
 
 #[cfg(all(test, feature = "std"))]
 pub mod tests {
