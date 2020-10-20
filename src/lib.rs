@@ -15,8 +15,8 @@ pub mod types;
 pub mod utils;
 pub mod uuid;
 pub mod v1_15_2;
-
 mod chat;
+mod byte_order;
 
 pub use deserialize::*;
 pub use serialize::*;

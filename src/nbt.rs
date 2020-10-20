@@ -1,11 +1,10 @@
-use crate::utils::{
-    read_int, read_long, read_one_byte, read_short, take, write_int, write_long, write_short,
-};
+use crate::utils::take;
 use crate::{DeserializeErr, DeserializeResult, Deserialized};
 use alloc::{string::{String, ToString}, borrow::ToOwned, fmt, vec::Vec, vec, format};
 
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
+use crate::byte_order::{ProtoByteOrder, ByteOrder};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct NamedTag {
@@ -193,10 +192,7 @@ fn write_contents<F>(contents: &Vec<F>) -> String
 
 // reads from the root level
 fn read_nbt_data(data: &[u8]) -> DeserializeResult<NamedTag> {
-    let Deserialized {
-        value: tag_type_id,
-        data: _,
-    } = read_one_byte(data)?;
+    let Deserialized { value: tag_type_id, data: _ } = ProtoByteOrder::read_ubyte(data)?;
     match tag_type_id {
         0x0A => read_named_tag(data),
         other => Err(DeserializeErr::NbtInvalidStartTag(other)),
@@ -205,10 +201,7 @@ fn read_nbt_data(data: &[u8]) -> DeserializeResult<NamedTag> {
 
 // reads any named tag: read id -> read name -> read tag with id -> name tag with name
 pub fn read_named_tag(data: &[u8]) -> DeserializeResult<NamedTag> {
-    let Deserialized {
-        value: tag_type_id,
-        data,
-    } = read_one_byte(data)?;
+    let Deserialized { value: tag_type_id, data } = ProtoByteOrder::read_ubyte(data)?;
     if tag_type_id == 0x00 {
         // tag end
         Deserialized::ok(Tag::End.with_name(""), data)
@@ -239,32 +232,32 @@ pub fn read_tag(tag_type_id: u8, data: &[u8]) -> DeserializeResult<Tag> {
 }
 
 fn read_tag_byte(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_one_byte(data)?.map(move |byte| Tag::Byte(byte as i8)))
+    Ok(ProtoByteOrder::read_byte(data)?.map(Tag::Byte))
 }
 
 fn read_tag_short(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_short(data)?.map(move |i| Tag::Short(i as i16)))
+    Ok(ProtoByteOrder::read_short(data)?.map(Tag::Short))
 }
 
 fn read_tag_int(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_int(data)?.map(move |i| Tag::Int(i as i32)))
+    Ok(ProtoByteOrder::read_int(data)?.map(Tag::Int))
 }
 
 fn read_tag_long(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_long(data)?.map(move |i| Tag::Long(i as i64)))
+    Ok(ProtoByteOrder::read_long(data)?.map(Tag::Long))
 }
 
 fn read_tag_float(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_int(data)?.map(move |i| Tag::Float(f32::from_bits(i as u32))))
+    Ok(ProtoByteOrder::read_float(data)?.map(Tag::Float))
 }
 
 fn read_tag_double(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_long(data)?.map(move |i| Tag::Double(f64::from_bits(i as u64))))
+    Ok(ProtoByteOrder::read_double(data)?.map(Tag::Double))
 }
 
 fn read_tag_byte_array(data: &[u8]) -> DeserializeResult<Tag> {
-    Ok(read_int(data)?
-        .and_then(move |size, rest| take(size as usize)(rest))?
+    Ok(ProtoByteOrder::read_int(data)?
+        .and_then(move |size, rest| take(size as usize, rest))?
         .map(move |arr| Tag::ByteArray(Vec::from(arr))))
 }
 
@@ -273,18 +266,17 @@ fn read_tag_string(data: &[u8]) -> DeserializeResult<Tag> {
 }
 
 fn read_tag_list(data: &[u8]) -> DeserializeResult<Tag> {
-    let Deserialized { value: contents_tag_type_id, data } = read_one_byte(data)?;
-    let Deserialized { value: list_length, data } = read_int(data)?;
+    let Deserialized { value: contents_tag_type_id, data } = ProtoByteOrder::read_ubyte(data)?;
+    let Deserialized { value: list_length, data } = ProtoByteOrder::read_int(data)?;
     if list_length == 0 {
         Deserialized::ok(Tag::List(vec![]), data)
     } else {
         let mut out_vec = Vec::with_capacity(list_length as usize);
         let mut remaining_data = data;
         for _ in 0..list_length {
-            let Deserialized {
-                value: element,
-                data: rest,
-            } = read_tag(contents_tag_type_id, &remaining_data)?;
+            let Deserialized { value: element, data: rest } =
+                read_tag(contents_tag_type_id, &remaining_data)?;
+
             out_vec.push(element);
             remaining_data = rest;
         }
@@ -312,19 +304,11 @@ fn read_tag_compound(data: &[u8]) -> DeserializeResult<Tag> {
 }
 
 fn read_tag_int_array(data: &[u8]) -> DeserializeResult<Tag> {
-    read_array_tag(
-        data,
-        move |data| Ok(read_int(data)?.map(move |r| r as i32)),
-        Tag::IntArray,
-    )
+    read_array_tag(data, ProtoByteOrder::read_int, Tag::IntArray)
 }
 
 fn read_tag_long_array(data: &[u8]) -> DeserializeResult<Tag> {
-    read_array_tag(
-        data,
-        move |data| Ok(read_long(data)?.map(move |r| r as i64)),
-        Tag::LongArray,
-    )
+    read_array_tag(data, ProtoByteOrder::read_long, Tag::LongArray)
 }
 
 fn read_array_tag<'a, R, F, M>(
@@ -336,7 +320,7 @@ fn read_array_tag<'a, R, F, M>(
         F: Fn(&'a [u8]) -> DeserializeResult<'a, R>,
         M: Fn(Vec<R>) -> Tag,
 {
-    let Deserialized { value: count, data } = read_int(data)?.map(move |v| v as i32);
+    let Deserialized { value: count, data } = ProtoByteOrder::read_int(data)?.map(move |v| v as i32);
     if count < 0 {
         Err(DeserializeErr::NbtBadLength(count as isize))
     } else {
@@ -356,8 +340,8 @@ fn read_array_tag<'a, R, F, M>(
 }
 
 fn read_string(data: &[u8]) -> DeserializeResult<String> {
-    read_short(data)?
-        .and_then(move |length, data| take(length as usize)(data))?
+    ProtoByteOrder::read_short(data)?
+        .and_then(move |length, data| take(length as usize, data))?
         .try_map(move |bytes| {
             String::from_utf8(Vec::from(bytes))
                 .map_err(move |err| DeserializeErr::BadStringEncoding(err))
@@ -373,7 +357,7 @@ impl NamedTag {
         } else {
             let payload_bytes = self.payload.bytes();
             let name_len = self.name.len();
-            let name_len_bytes = write_short(name_len as u16);
+            let name_len_bytes = ProtoByteOrder::write_ushort(name_len as u16);
             let mut out =
                 Vec::with_capacity(1 + name_len_bytes.len() + name_len + payload_bytes.len());
             out.push(type_id);
@@ -407,15 +391,15 @@ impl Tag {
     pub fn bytes(&self) -> Vec<u8> {
         match self {
             Tag::Byte(b) => vec![*b as u8],
-            Tag::Short(v) => Vec::from(write_short(*v as u16)),
-            Tag::Int(v) => Vec::from(write_int(*v as u32)),
-            Tag::Long(v) => Vec::from(write_long(*v as u64)),
-            Tag::Float(v) => Vec::from(write_int(v.to_bits())),
-            Tag::Double(v) => Vec::from(write_long(v.to_bits())),
+            Tag::Short(v) => Vec::from(ProtoByteOrder::write_short(*v)),
+            Tag::Int(v) => Vec::from(ProtoByteOrder::write_int(*v)),
+            Tag::Long(v) => Vec::from(ProtoByteOrder::write_long(*v)),
+            Tag::Float(v) => Vec::from(ProtoByteOrder::write_float(*v)),
+            Tag::Double(v) => Vec::from(ProtoByteOrder::write_double(*v)),
             Tag::ByteArray(v) => {
                 let n = v.len();
                 let mut out = Vec::with_capacity(n + 4);
-                let size_bytes = write_int(n as u32);
+                let size_bytes = ProtoByteOrder::write_uint(n as u32);
                 out.extend_from_slice(&size_bytes);
                 out.extend(v);
                 out
@@ -423,7 +407,7 @@ impl Tag {
             Tag::String(v) => {
                 let n = v.len();
                 let mut out = Vec::with_capacity(n + 2);
-                let size_bytes = write_short(n as u16);
+                let size_bytes = ProtoByteOrder::write_ushort(n as u16);
                 out.extend_from_slice(&size_bytes);
                 out.extend(v.bytes());
                 out
@@ -452,7 +436,7 @@ impl Tag {
 
                 let mut out = Vec::new();
                 out.push(elem_id);
-                let count_bytes = write_int(count as u32);
+                let count_bytes = ProtoByteOrder::write_uint(count as u32);
                 out.extend_from_slice(&count_bytes);
                 out.extend(v.iter().flat_map(move |elem| elem.bytes().into_iter()));
                 out
@@ -468,10 +452,10 @@ impl Tag {
             Tag::IntArray(v) => {
                 let n = v.len();
                 let mut out = Vec::with_capacity(4 + (4 * n));
-                let n_bytes = write_int(n as u32);
+                let n_bytes = ProtoByteOrder::write_uint(n as u32);
                 out.extend_from_slice(&n_bytes);
                 for value in v {
-                    let bytes = write_int(*value as u32);
+                    let bytes = ProtoByteOrder::write_int(*value);
                     out.extend_from_slice(&bytes);
                 }
                 out
@@ -479,10 +463,10 @@ impl Tag {
             Tag::LongArray(v) => {
                 let n = v.len();
                 let mut out = Vec::with_capacity(4 + (8 * n));
-                let n_bytes = write_int(n as u32);
+                let n_bytes = ProtoByteOrder::write_uint(n as u32);
                 out.extend_from_slice(&n_bytes);
                 for value in v {
-                    let bytes = write_long(*value as u64);
+                    let bytes = ProtoByteOrder::write_long(*value);
                     out.extend_from_slice(&bytes);
                 }
                 out

@@ -9,6 +9,7 @@ pub use super::chat::*;
 
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
+use crate::byte_order::{ProtoByteOrder, ByteOrder};
 
 // bool
 impl Serialize for bool {
@@ -19,7 +20,7 @@ impl Serialize for bool {
 
 impl Deserialize for bool {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        read_one_byte(data)?.try_map(move |b| match b {
+        ProtoByteOrder::read_ubyte(data)?.try_map(move |b| match b {
             0x00 => Ok(false),
             0x01 => Ok(true),
             other => Err(DeserializeErr::InvalidBool(other)),
@@ -43,7 +44,7 @@ impl Serialize for u8 {
 
 impl Deserialize for u8 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        read_one_byte(data)
+        ProtoByteOrder::read_ubyte(data)
     }
 }
 
@@ -63,7 +64,7 @@ impl Serialize for i8 {
 
 impl Deserialize for i8 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(read_one_byte(data)?.map(move |byte| byte as i8))
+        ProtoByteOrder::read_byte(data)
     }
 }
 
@@ -77,14 +78,14 @@ impl TestRandom for i8 {
 // u16
 impl Serialize for u16 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = write_short(*self);
-        to.serialize_bytes(&data[..])
+        let data = ProtoByteOrder::write_ushort(*self);
+        to.serialize_bytes(&data)
     }
 }
 
 impl Deserialize for u16 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        read_short(data)
+        ProtoByteOrder::read_ushort(data)
     }
 }
 
@@ -98,15 +99,14 @@ impl TestRandom for u16 {
 // i16
 impl Serialize for i16 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        (*self as u16).mc_serialize(to)
+        let data = ProtoByteOrder::write_short(*self);
+        to.serialize_bytes(&data)
     }
 }
 
 impl Deserialize for i16 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        u16::mc_deserialize(data)?
-            .map(move |other| other as i16)
-            .into()
+        ProtoByteOrder::read_short(data)
     }
 }
 
@@ -120,14 +120,14 @@ impl TestRandom for i16 {
 // int
 impl Serialize for i32 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = write_int(*self as u32);
+        let data = ProtoByteOrder::write_int(*self);
         to.serialize_bytes(&data[..])
     }
 }
 
 impl Deserialize for i32 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(read_int(data)?.map(move |v| v as i32))
+        ProtoByteOrder::read_int(data)
     }
 }
 
@@ -141,14 +141,14 @@ impl TestRandom for i32 {
 // long
 impl Serialize for i64 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = write_long(*self as u64);
+        let data = ProtoByteOrder::write_long(*self);
         to.serialize_bytes(&data[..])
     }
 }
 
 impl Deserialize for i64 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(read_long(data)?.map(move |v| v as i64))
+        ProtoByteOrder::read_long(data)
     }
 }
 
@@ -163,16 +163,14 @@ impl TestRandom for i64 {
 impl Serialize for f32 {
     //noinspection ALL
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = (*self).to_be_bytes();
+        let data = ProtoByteOrder::write_float(*self);
         to.serialize_bytes(&data[..])
     }
 }
 
 impl Deserialize for f32 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        i32::mc_deserialize(data)?
-            .map(move |r| f32::from_bits(r as u32))
-            .into()
+        ProtoByteOrder::read_float(data)
     }
 }
 
@@ -187,16 +185,14 @@ impl TestRandom for f32 {
 impl Serialize for f64 {
     //noinspection ALL
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = (*self).to_be_bytes();
+        let data = ProtoByteOrder::write_double(*self);
         to.serialize_bytes(&data[..])
     }
 }
 
 impl Deserialize for f64 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        i64::mc_deserialize(data)?
-            .map(move |r| f64::from_bits(r as u64))
-            .into()
+        ProtoByteOrder::read_double(data)
     }
 }
 
@@ -323,10 +319,7 @@ fn deserialize_var_num(orig_data: &[u8], max_bytes: usize) -> DeserializeResult<
         if i == max_bytes {
             return DeserializeErr::VarNumTooLong(Vec::from(&orig_data[..i])).into();
         }
-        let Deserialized {
-            value: byte,
-            data: rest,
-        } = read_one_byte(data)?;
+        let Deserialized { value: byte, data: rest} = ProtoByteOrder::read_ubyte(data)?;
         data = rest;
         has_more = byte & 0x80 != 0;
         v |= ((byte as u64) & 0x7F) << bit_place;
@@ -351,7 +344,7 @@ impl Deserialize for String {
             if length.0 < 0 {
                 Err(DeserializeErr::NegativeLength(length))
             } else {
-                take(length.0 as usize)(rest)?.try_map(move |taken| {
+                take(length.0 as usize, rest)?.try_map(move |taken| {
                     String::from_utf8(taken.to_vec()).map_err(DeserializeErr::BadStringEncoding)
                 })
             }
@@ -396,30 +389,30 @@ impl Serialize for IntPosition {
         } else {
             self.x as u64
         } & 0x3FFFFFF;
+
         let z_raw = if self.z < 0 {
             (self.z + 0x2000000) as u64 | 0x2000000
         } else {
             self.z as u64
         } & 0x3FFFFFF;
+
         let y_raw = if self.y < 0 {
             (self.y + 0x800) as u64 | 0x800
         } else {
             self.y as u64
         } & 0xFFF;
 
-        let data_raw = ((x_raw << 38) | (z_raw << 12) | y_raw) as u64;
-        let data_i64 = data_raw as i64;
-        to.serialize_other(&data_i64)
+        let data = ProtoByteOrder::write_ulong(((x_raw << 38) | (z_raw << 12) | y_raw) as u64);
+        to.serialize_bytes(&data)
     }
 }
 
 impl Deserialize for IntPosition {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: raw, data } = i64::mc_deserialize(data)?;
-        let raw_unsigned = raw as u64;
-        let mut x = ((raw_unsigned >> 38) as u32) & 0x3FFFFFF;
-        let mut z = ((raw_unsigned >> 12) & 0x3FFFFFF) as u32;
-        let mut y = ((raw_unsigned & 0xFFF) as u16) & 0xFFF;
+        let Deserialized { value: raw, data } = ProtoByteOrder::read_ulong(data)?;
+        let mut x = ((raw >> 38) as u32) & 0x3FFFFFF;
+        let mut z = ((raw >> 12) & 0x3FFFFFF) as u32;
+        let mut y = ((raw & 0xFFF) as u16) & 0xFFF;
 
         if (x & 0x2000000) != 0 {
             // is the 26th bit set
@@ -470,7 +463,7 @@ impl Serialize for Angle {
 
 impl Deserialize for Angle {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(read_one_byte(data)?.map(move |b| Angle { value: b }))
+        Ok(ProtoByteOrder::read_ubyte(data)?.map(move |b| Angle { value: b }))
     }
 }
 
@@ -487,34 +480,14 @@ impl TestRandom for Angle {
 
 impl Serialize for UUID4 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let bytes = self.to_u128().to_be_bytes();
+        let bytes = ProtoByteOrder::write_u2long(self.to_u128());
         to.serialize_bytes(&bytes[..])
     }
 }
 
 impl Deserialize for UUID4 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        take(16)(data)?
-            .map(move |bytes| {
-                let raw = (bytes[0] as u128) << 120
-                    | (bytes[1] as u128) << 112
-                    | (bytes[2] as u128) << 104
-                    | (bytes[3] as u128) << 96
-                    | (bytes[4] as u128) << 88
-                    | (bytes[5] as u128) << 80
-                    | (bytes[6] as u128) << 72
-                    | (bytes[7] as u128) << 64
-                    | (bytes[8] as u128) << 56
-                    | (bytes[9] as u128) << 48
-                    | (bytes[10] as u128) << 40
-                    | (bytes[11] as u128) << 32
-                    | (bytes[12] as u128) << 24
-                    | (bytes[13] as u128) << 16
-                    | (bytes[14] as u128) << 8
-                    | bytes[15] as u128;
-                UUID4::from(raw)
-            })
-            .into()
+        Ok(ProtoByteOrder::read_u2long(data)?.map(move |raw| UUID4::from(raw)))
     }
 }
 
@@ -695,14 +668,8 @@ impl Serialize for Slot {
 
 impl Deserialize for Slot {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized {
-            value: item_id,
-            data,
-        } = VarInt::mc_deserialize(data)?;
-        let Deserialized {
-            value: item_count,
-            data,
-        } = i8::mc_deserialize(data)?;
+        let Deserialized { value: item_id, data} = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: item_count, data} = i8::mc_deserialize(data)?;
         if data.is_empty() {
             return Err(DeserializeErr::Eof);
         }
