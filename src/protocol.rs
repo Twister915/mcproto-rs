@@ -47,7 +47,7 @@ pub struct Id {
 
 impl Serialize for Id {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_other(&self.id)
+        to.serialize_other(&crate::types::VarInt(self.id))
     }
 }
 
