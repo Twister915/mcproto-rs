@@ -42,7 +42,7 @@ impl State {
 pub struct Id {
     pub id: i32,
     pub state: State,
-    pub direction: PacketDirection
+    pub direction: PacketDirection,
 }
 
 impl Serialize for Id {
@@ -87,12 +87,14 @@ pub struct ProtocolPacketField {
     pub kind: String,
 }
 
-pub trait Packet: Serialize {
+pub trait Packet: Sized {
     fn id(&self) -> Id;
 
     fn version() -> crate::types::VarInt;
 
     fn mc_deserialize(raw: RawPacket<'_>) -> Result<Self, PacketErr>;
+
+    fn mc_serialize_body<S>(&self, to: &mut S) -> SerializeResult where S: Serializer;
 }
 
 pub enum PacketErr {
@@ -284,10 +286,8 @@ macro_rules! define_protocol {
                     other => Err(UnknownId(other.into())),
                 }
             }
-        }
 
-        impl crate::Serialize for $packett {
-            fn mc_serialize<S: crate::Serializer>(&self, to: &mut S) -> crate::SerializeResult {
+            fn mc_serialize_body<S>(&self, to: &mut S) -> crate::SerializeResult where S: crate::Serializer {
                 use self::$packett::*;
                 match self {
                     $($nam(body) => to.serialize_other(body)),+

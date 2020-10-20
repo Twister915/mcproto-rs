@@ -10,7 +10,7 @@ macro_rules! packet_test_cases {
                     println!("{:?}", packet);
                 }
                 let mut out = BytesSerializer::default();
-                packet.mc_serialize(&mut out).expect("serialize succeeds");
+                packet.mc_serialize_body(&mut out).expect("serialize succeeds");
                 let bytes = out.into_bytes();
 
                 let raw_packet = RawPacket {
@@ -36,14 +36,14 @@ macro_rules! packet_test_cases {
             let packet = $pnam::$varnam($bodnam::test_gen_random());
             let mut serializer = BenchSerializer::default();
             packet
-                .mc_serialize(&mut serializer)
+                .mc_serialize_body(&mut serializer)
                 .expect("serialize succeeds");
             b.bytes = serializer.len() as u64;
             serializer.reset();
 
             b.iter(|| {
                 packet
-                    .mc_serialize(&mut serializer)
+                    .mc_serialize_body(&mut serializer)
                     .expect("serialize succeeds");
                 serializer.reset();
             })
@@ -55,7 +55,7 @@ macro_rules! packet_test_cases {
             let packet = $pnam::$varnam($bodnam::test_gen_random());
             let mut serializer = BytesSerializer::default();
             packet
-                .mc_serialize(&mut serializer)
+                .mc_serialize_body(&mut serializer)
                 .expect("serialize succeeds");
 
             let bytes = serializer.into_bytes();
