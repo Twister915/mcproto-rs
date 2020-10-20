@@ -111,9 +111,7 @@ impl<'a> RawUUID<'a> {
         let consume_dash_f = if has_dash {
             |str: &'a str| str_tag(str, DASH)
         } else {
-            |str: &'a str| {
-                Some(str)
-            }
+            |str: &'a str| Some(str)
         };
 
         let (s1, from) = str_split(from, 4)?;
