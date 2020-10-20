@@ -3012,6 +3012,20 @@ impl EntityMetadata {
         })
     }
 
+    pub fn remove(&mut self, index: u8) -> bool {
+        for i in 0..self.fields.len() {
+            let field = self.fields
+                .get(i)
+                .expect("iterating through this vec, definitely have this index");
+            if field.index == index {
+                self.fields.remove(i);
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn get(&self, index: u8) -> Option<&EntityMetadataFieldData> {
         for field in &self.fields {
             if field.index == index {
@@ -3020,6 +3034,36 @@ impl EntityMetadata {
         }
 
         None
+    }
+}
+
+impl<'a> core::iter::IntoIterator for &'a EntityMetadata {
+    type Item = (u8, &'a EntityMetadataFieldData);
+    type IntoIter = FieldIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        FieldIter {
+            data: self,
+            at: 0,
+        }
+    }
+}
+
+pub struct FieldIter<'a> {
+    data: &'a EntityMetadata,
+    at: usize
+}
+
+impl<'a> core::iter::Iterator for FieldIter<'a> {
+    type Item = (u8, &'a EntityMetadataFieldData);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.data.fields.get(self.at).map(move |field| (field.index, &field.data))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.data.fields.len();
+        (len, Some(len))
     }
 }
 
