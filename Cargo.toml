@@ -10,7 +10,6 @@ keywords = ["minecraft", "games", "protocol", "serialziers", "deserializers", "p
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 base64 = { version = "0.12.3", default-features = false, features = ["alloc"] }
 rand = { version = "0.7", optional = true }
-paste = "1.0.1"
 
 [dependencies.serde]
 version = "1.0.116"

@@ -53,11 +53,19 @@ pub trait ByteOrder {
         Ok(Self::read_ushort(data)?.map(move |data| data as i16))
     }
 
+    fn write_ubyte(v: u8) -> [u8; 1] {
+        [v]
+    }
+
     fn read_ubyte(data: &[u8]) -> DeserializeResult<u8> {
         match data.split_first() {
             Some((byte, rest)) => Deserialized::ok(*byte, rest),
             None => Err(DeserializeErr::Eof)
         }
+    }
+
+    fn write_byte(v: i8) -> [u8; 1] {
+        [v as u8]
     }
 
     fn read_byte(data: &[u8]) -> DeserializeResult<i8> {

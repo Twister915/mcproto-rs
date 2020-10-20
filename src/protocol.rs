@@ -87,19 +87,7 @@ macro_rules! as_item {
 }
 
 #[macro_export]
-macro_rules! __protocol_body_serialize_def_helper {
-    ($to: ident, $slf: ident, $fieldn: ident, $($field_rest: ident),+) => {
-        $to.serialize_other(&$slf.$fieldn)?;
-        $crate::__protocol_body_serialize_def_helper!($to, $slf, $($field_rest),+);
-    };
-
-    ( $to: ident, $slf: ident, $fieldn: ident ) => {
-        $to.serialize_other(&$slf.$fieldn)
-    };
-}
-
-#[macro_export]
-macro_rules! __protocol_body_def_helper {
+macro_rules! proto_struct {
     ($bodyt: ident { }) => {
         #[derive(Debug, Clone, PartialEq, Default)]
         pub struct $bodyt;
@@ -123,15 +111,17 @@ macro_rules! __protocol_body_def_helper {
             }
         }
     };
-    ($bodyt: ident { $($fname: ident: $ftyp: ty ),+ }) => {
+    ($bodyt: ident $(<$($g: ident),*>)? {
+        $($fname: ident: $ftyp: ty ),+
+    }) => {
         $crate::as_item! {
             #[derive(Debug, Clone, PartialEq)]
-            pub struct $bodyt {
+            pub struct $bodyt$(<$($g),*> where $($g: alloc::fmt::Debug + Clone + PartialEq),*)? {
                $(pub $fname: $ftyp),+
             }
         }
 
-        impl Serialize for $bodyt {
+        impl$(<$($g),*>)? Serialize for $bodyt$(<$($g),*> where $($g: Serialize + alloc::fmt::Debug + Clone + PartialEq),*)? {
             fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
                 $(
                     to.serialize_other(&self.$fname)?;
@@ -140,7 +130,7 @@ macro_rules! __protocol_body_def_helper {
             }
         }
 
-        impl Deserialize for $bodyt {
+        impl$(<$($g),*>)? Deserialize for $bodyt$(<$($g),*> where $($g: Deserialize + alloc::fmt::Debug + Clone + PartialEq),*)? {
             fn mc_deserialize(_rest: &[u8]) -> DeserializeResult<'_, Self> {
                 $(let Deserialized{ value: $fname, data: _rest } = <$ftyp>::mc_deserialize(_rest)?;)+
 
@@ -148,8 +138,23 @@ macro_rules! __protocol_body_def_helper {
             }
         }
 
+        #[allow(unused_parens)]
+        impl$(<$($g),*>)? From<($($ftyp),+)> for $bodyt$(<$($g),*>)? $(where $($g: alloc::fmt::Debug + Clone + PartialEq),*)? {
+            fn from(other: ($($ftyp),+)) -> Self {
+                let ($($fname),+) = other;
+                Self { $($fname),+ }
+            }
+        }
+
+        #[allow(unused_parens)]
+        impl$(<$($g),*>)? From<$bodyt$(<$($g),*>)?> for ($($ftyp),+) $(where $($g: alloc::fmt::Debug + Clone + PartialEq),*)? {
+            fn from(other: $bodyt$(<$($g),*>)?) -> Self {
+                ($(other.$fname),+)
+            }
+        }
+
         #[cfg(all(test, feature = "std"))]
-        impl TestRandom for $bodyt {
+        impl$(<$($g),*>)? TestRandom for $bodyt$(<$($g),*> where $($g: TestRandom + alloc::fmt::Debug + Clone + PartialEq),*)? {
             fn test_gen_random() -> Self {
                 Self{ $($fname: <$ftyp>::test_gen_random()),+ }
             }
@@ -159,7 +164,11 @@ macro_rules! __protocol_body_def_helper {
 
 #[macro_export]
 macro_rules! define_protocol {
-    ($packett: ident, $rawpackett: ident, $rawdt: ident, $directiont: ident, $statet: ident, $idt: ident, $idi: ident => { $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident { $($fnam: ident: $ftyp: ty),* }),*}) => {
+    ($packett: ident, $rawpackett: ident, $rawdt: ident, $directiont: ident, $statet: ident, $idt: ident, $idi: ident => {
+        $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident {
+            $($fnam: ident: $ftyp: ty),* }),*
+        }
+    ) => {
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
         pub struct $idi {
             pub id: $idt,
@@ -358,15 +367,15 @@ macro_rules! define_protocol {
             }
         }
 
-        $($crate::__protocol_body_def_helper!($body { $($fnam: $ftyp),* });)*
+        $($crate::proto_struct!($body { $($fnam: $ftyp),* });)*
     };
 }
 
 #[macro_export]
-macro_rules! count_num {
-    () => { 0 };
-    ($item: tt) => { 1 };
-    ($item: tt, $($rest: tt),+) => { 1 + count_num!($($rest),+) }
+macro_rules! strip_plus {
+    (+ $($rest: tt)*) => {
+        $($rest)*
+    }
 }
 
 #[macro_export]
@@ -415,6 +424,10 @@ macro_rules! proto_enum_with_type {
         }
 
         impl $typname {
+            pub const fn variant_count() -> usize {
+                crate::strip_plus!($(+ crate::instead_of_ident!($bval, 1))+)
+            }
+
             pub fn deserialize_with_id<'a>(id: $typ, data: &'a[u8]) -> DeserializeResult<'a, Self> {
                 match id.into() {
                     $($bval => proto_enum_deserialize_variant!(data, $typname::$nam $(($bod))?)),*,
@@ -450,7 +463,10 @@ macro_rules! proto_enum_with_type {
         #[cfg(all(test, feature = "std"))]
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
-                let mut idx: usize = (rand::random::<usize>() % (count_num!($($bval),+))) + 1;
+                let mut rng = rand::thread_rng();
+                use rand::distributions::Distribution;
+                let distr = rand::distributions::Uniform::new(1, Self::variant_count() + 1);
+                let mut idx: usize = distr.sample(&mut rng);
                 $(
                     idx -= 1;
                     if idx == 0 {
@@ -511,6 +527,10 @@ macro_rules! proto_str_enum {
         }
 
         impl $typname {
+            pub const fn variant_count() -> usize {
+                crate::strip_plus!($(+ crate::instead_of_ident!($sval, 1))+)
+            }
+
             pub fn name(&self) -> &str {
                 match self {
                     $($typname::$nam$((instead_of_ident!($bod, _)))? => $sval),+,
@@ -554,7 +574,10 @@ macro_rules! proto_str_enum {
         #[cfg(all(test, feature = "std"))]
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
-                let mut idx: usize = (rand::random::<usize>() % (count_num!($($nam),+))) + 1;
+                let mut rng = rand::thread_rng();
+                use rand::distributions::Distribution;
+                let distr = rand::distributions::Uniform::new(1, Self::variant_count() + 1);
+                let mut idx: usize = distr.sample(&mut rng);
                 $(
                     idx -= 1;
                     if idx == 0 {
@@ -569,38 +592,22 @@ macro_rules! proto_str_enum {
 
 #[macro_export]
 macro_rules! proto_byte_flag {
-    ($typname: ident, $($bval: literal :: $nam: ident),*) => {
+    ($typname: ident, $($bval: literal :: $isnam: ident $setnam: ident),*) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
         pub struct $typname(pub u8);
 
         impl $typname {
-            $(paste::paste! {
-                pub fn [<is_ $nam>](&self) -> bool {
-                    self.0 & $bval != 0
-                }
-            })*
+            $(pub fn $isnam(&self) -> bool {
+                self.0 & $bval != 0
+            }
 
-            $(paste::paste! {
-                pub fn [<set_ $nam>](&mut self, value: bool) {
-                    if value {
-                        self.0 |= $bval;
-                    } else {
-                        self.0 ^= $bval;
-                    }
+            pub fn $setnam(&mut self, value: bool) {
+                if value {
+                    self.0 |= $bval;
+                } else {
+                    self.0 ^= $bval;
                 }
-            })*
-
-            $(paste::paste! {
-                pub fn [<with_ $nam>](mut self, value: bool) -> Self {
-                    if value {
-                        self.0 |= $bval;
-                    } else {
-                        self.0 ^= $bval;
-                    }
-
-                    self
-                }
-            })*
+            })+
         }
 
         impl Serialize for $typname {
@@ -619,137 +626,11 @@ macro_rules! proto_byte_flag {
         impl TestRandom for $typname {
             fn test_gen_random() -> Self {
                 let mut out = <$typname>::default();
-                $(paste::paste! {
-                    out.[<set_ $nam>](rand::random::<bool>());
-                })+
+                $(
+                    out.$setnam(rand::random::<bool>());
+                )+
                 out
             }
         }
     }
-}
-
-#[macro_export]
-macro_rules! counted_array_type {
-    ($name: ident, $countert: ty, $tousize_fn: ident, $fromusize_fn: ident) => {
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct $name<T>
-        where
-            T: Debug + Clone + PartialEq,
-        {
-            pub data: Vec<T>,
-        }
-
-        impl<T> Serialize for $name<T>
-        where
-            T: Serialize + Debug + Clone + PartialEq,
-        {
-            fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-                let count: $countert = $fromusize_fn(self.data.len());
-                to.serialize_other(&count)?;
-
-                for entry in &self.data {
-                    to.serialize_other(entry)?;
-                }
-
-                Ok(())
-            }
-        }
-
-        impl<T> Deserialize for $name<T>
-        where
-            T: Deserialize + Debug + Clone + PartialEq,
-        {
-            fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-                let Deserialized {
-                    value: raw_count,
-                    mut data,
-                } = <$countert>::mc_deserialize(data)?;
-                let count: usize = $tousize_fn(raw_count);
-
-                let mut out = Vec::with_capacity(count);
-                for _ in 0..count {
-                    let Deserialized {
-                        value: next,
-                        data: rest,
-                    } = T::mc_deserialize(data)?;
-                    data = rest;
-                    out.push(next);
-                }
-
-                Deserialized::ok(Self { data: out }, data)
-            }
-        }
-
-        impl<T> Into<Vec<T>> for $name<T>
-        where
-            T: Debug + Clone + PartialEq,
-        {
-            fn into(self) -> Vec<T> {
-                self.data
-            }
-        }
-
-        impl<T> From<Vec<T>> for $name<T>
-        where
-            T: Debug + Clone + PartialEq,
-        {
-            fn from(data: Vec<T>) -> Self {
-                Self { data }
-            }
-        }
-
-        impl<'a, T> IntoIterator for &'a mut $name<T>
-        where
-            T: Debug + Clone + PartialEq,
-        {
-            type Item = &'a mut T;
-            type IntoIter = alloc::slice::IterMut<'a, T>;
-
-            fn into_iter(self) -> Self::IntoIter {
-                let data = &mut self.data;
-                data.iter_mut()
-            }
-        }
-
-        impl<'a, T> IntoIterator for &'a $name<T>
-        where
-            T: Debug + Clone + PartialEq,
-        {
-            type Item = &'a T;
-            type IntoIter = alloc::slice::Iter<'a, T>;
-
-            fn into_iter(self) -> Self::IntoIter {
-                let data = &self.data;
-                data.iter()
-            }
-        }
-
-        impl<T> IntoIterator for $name<T>
-        where
-            T: Debug + Clone + PartialEq,
-        {
-            type Item = T;
-            type IntoIter = alloc::vec::IntoIter<T>;
-
-            fn into_iter(self) -> Self::IntoIter {
-                self.data.into_iter()
-            }
-        }
-
-        #[cfg(all(test, feature = "std"))]
-        impl<T> TestRandom for $name<T>
-        where
-            T: TestRandom + Debug + Clone + PartialEq,
-        {
-            fn test_gen_random() -> Self {
-                let elem_count: usize = rand::random::<usize>() % 32;
-                let mut out = Vec::with_capacity(elem_count);
-                for _ in 0..elem_count {
-                    out.push(T::test_gen_random());
-                }
-
-                Self { data: out }
-            }
-        }
-    };
 }

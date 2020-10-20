@@ -4,7 +4,7 @@ macro_rules! packet_test_cases {
     ($pnam: ident, $varnam: ident, $bodnam: ident, $testnam: ident, $benchnams: ident, $benchnamd: ident) => {
         #[test]
         fn $testnam() {
-            for k in 0..10 {
+            for k in 0..50 {
                 let packet = $pnam::$varnam($bodnam::test_gen_random());
                 if k == 0 {
                     println!("{:?}", packet);

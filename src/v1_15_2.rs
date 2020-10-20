@@ -70,8 +70,8 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     LoginEncryptionRequest, 0x01, Login, ClientBound => LoginEncryptionRequestSpec {
         server_id: String,
-        public_key: VarIntCountedArray<u8>,
-        verify_token: VarIntCountedArray<u8>
+        public_key: CountedArray<u8, VarInt>,
+        verify_token: CountedArray<u8, VarInt>
     },
     LoginSuccess, 0x02, Login, ClientBound => LoginSuccessSpec {
         uuid_string: String,
@@ -89,8 +89,8 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         name: String
     },
     LoginEncryptionResponse, 0x01, Login, ServerBound => LoginEncryptionResponseSpec {
-        shared_secret: VarIntCountedArray<u8>,
-        verify_token: VarIntCountedArray<u8>
+        shared_secret: CountedArray<u8, VarInt>,
+        verify_token: CountedArray<u8, VarInt>
     },
     LoginPluginResponse, 0x02, Login, ServerBound => LoginPluginResponseSpec {
         message_id: VarInt,
@@ -104,43 +104,29 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         entity_id: VarInt,
         object_uuid: UUID4,
         entity_type: VarInt,
-        x: f64,
-        y: f64,
-        z: f64,
+        position: Vec3<f64>,
         pitch: Angle,
         yaw: Angle,
         data: i32,
-        velocity_x: i16,
-        velocity_y: i16,
-        velocity_z: i16
+        velocity: Vec3<i16>
     },
     PlaySpawnExperienceOrb, 0x01, Play, ClientBound => PlaySpawnExperienceOrbSpec {
         entity_id: VarInt,
-        x: f64,
-        y: f64,
-        z: f64,
+        position: Vec3<f64>,
         count: i16
     },
     PlaySpawnWeatherEntity, 0x02, Play, ClientBound => PlaySpawnWeatherEntitySpec {
         entity_id: VarInt,
         entity_type: u8,
-        x: f64,
-        y: f64,
-        z: f64
+        position: Vec3<f64>
     },
     PlaySpawnLivingEntity, 0x03, Play, ClientBound => PlaySpawnLivingEntitySpec {
         entity_id: VarInt,
         entity_uuid: UUID4,
         entity_type: VarInt,
-        x: f64,
-        y: f64,
-        z: f64,
-        yaw: Angle,
-        pitch: Angle,
+        location: EntityLocation<f64, Angle>,
         head_pitch: Angle,
-        velocity_x: i16,
-        velocity_y: i16,
-        velocity_z: i16
+        velocity: Vec3<i16>
     },
     PlaySpawnPainting, 0x04, Play, ClientBound => PlaySpawnPaintingSpec {
         entity_id: VarInt,
@@ -152,18 +138,14 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     PlaySpawnPlayer, 0x05, Play, ClientBound => PlaySpawnPlayerSpec {
         entity_id: VarInt,
         uuid: UUID4,
-        x: f64,
-        y: f64,
-        z: f64,
-        yaw: Angle,
-        pitch: Angle
+        location: EntityLocation<f64, Angle>
     },
     PlayEntityAnimation, 0x06, Play, ClientBound => PlayEntityAnimationSpec {
         entity_id: VarInt,
         animation: EntityAnimationKind
     },
     PlayStatistics, 0x07, Play, ClientBound => PlayStatisticsSpec {
-        entries: VarIntCountedArray<Statistic>
+        entries: CountedArray<Statistic, VarInt>
     },
     PlayAcknowledgePlayerDigging, 0x08, Play, ClientBound => PlayAcknowledgePlayerDiggingSpec {
         location: IntPosition,
@@ -204,18 +186,17 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         position: ChatPosition
     },
     PlayMultiBlockChange, 0x10, Play, ClientBound => PlayMultiBlockChangeSpec {
-        chunk_x: i32,
-        chunk_z: i32,
-        changes: VarIntCountedArray<MultiBlockChangeRecord>
+        chunk: ChunkPosition<i32>,
+        changes: CountedArray<MultiBlockChangeRecord, VarInt>
     },
     PlayTabComplete, 0x11, Play, ClientBound => PlayTabCompleteSpec {
         id: VarInt,
         start: VarInt,
         length: VarInt,
-        matches: VarIntCountedArray<TabCompleteMatch>
+        matches: CountedArray<TabCompleteMatch, VarInt>
     },
     PlayDeclareCommands, 0x12, Play, ClientBound => PlayDeclareCommandsSpec {
-        nodes: VarIntCountedArray<CommandNodeSpec>,
+        nodes: CountedArray<CommandNodeSpec, VarInt>,
         root_index: VarInt
     },
     PlayServerWindowConfirmation, 0x13, Play, ClientBound => PlayServerWindowConfirmationSpec {
@@ -228,7 +209,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayWindowItems, 0x15, Play, ClientBound => PlayWindowItemsSpec {
         window_id: u8,
-        slots: ShortCountedArray<Option<Slot>>
+        slots: CountedArray<Slot, i16>
     },
     PlayWindowProperty, 0x16, Play, ClientBound => PlayWindowPropertySpec {
         window_id: u8,
@@ -238,7 +219,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     PlaySetSlot, 0x17, Play, ClientBound => PlaySetSlotSpec {
         window_id: u8,
         slow: i16,
-        slot_data: Option<Slot>
+        slot_data: Slot
     },
     PlaySetCooldown, 0x18, Play, ClientBound => PlaySetCooldownSpec {
         item_id: VarInt,
@@ -251,9 +232,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     PlayNamedSoundEffect, 0x1A, Play, ClientBound => PlayNamedSoundEffectSpec {
         sound_name: String,
         sound_category: SoundCategory,
-        position_x: FixedInt,
-        position_y: FixedInt,
-        position_z: FixedInt,
+        position: Vec3<FixedInt>,
         volume: f32,
         pitch: f32
     },
@@ -265,18 +244,13 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         raw_status: u8 // todo deal with the gigantic table
     },
     PlayExplosion, 0x1D, Play, ClientBound => PlayExplosionSpec {
-        x: f32,
-        y: f32,
-        z: f32,
+        position: Vec3<f32>,
         strength: f32,
-        records: IntCountedArray<ExplosionRecord>,
-        player_motion_x: f32,
-        player_motion_y: f32,
-        player_motion_z: f32
+        records: CountedArray<Vec3<i8>, i32>,
+        player_motion: Vec3<f32>
     },
     PlayUnloadChunk, 0x1E, Play, ClientBound => PlayUnloadChunkSpec {
-        x: i32,
-        y: i32
+        position: ChunkPosition<i32>
     },
     PlayChangeGameState, 0x1F, Play, ClientBound => PlayChangeGameStateSpec {
         reason: GameChangeReason
@@ -301,18 +275,13 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     PlayParticle, 0x24, Play, ClientBound => PlayParticleSpec {
         particle_id: i32,
         long_distance: bool,
-        x: f64,
-        y: f64,
-        z: f64,
-        offset_x: f32,
-        offset_y: f32,
-        offset_z: f32,
+        position: Vec3<f64>,
+        offset: Vec3<f32>,
         particle_data: i32,
         data: RemainingBytes // todo
     },
     PlayUpdateLight, 0x25, Play, ClientBound => PlayUpdateLightSpec {
-        chunk_x: VarInt,
-        chunk_z: VarInt,
+        chunk: ChunkPosition<VarInt>,
         update: LightingUpdateSpec
     },
     PlayJoinGame, 0x26, Play, ClientBound => PlayJoinGameSpec {
@@ -331,12 +300,12 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         scale: i8,
         tracking_position: bool,
         locked: bool,
-        icons: VarIntCountedArray<MapIconSpec>,
+        icons: CountedArray<MapIconSpec, VarInt>,
         columns: MapColumns
     },
     PlayTradeList, 0x28, Play, ClientBound => PlayTradeListSpec {
         window_id: VarInt,
-        trades: ByteCountedArray<TradeSpec>,
+        trades: CountedArray<TradeSpec, i8>,
         villager_level: VarInt,
         experience: VarInt,
         regular_villager: bool,
@@ -344,35 +313,24 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayEntityPosition, 0x29, Play, ClientBound => PlayEntityPositionSpec {
         entity_id: VarInt,
-        delta_x: i16,
-        delta_y: i16,
-        delta_z: i16,
+        delta: Vec3<i16>,
         on_ground: bool
     },
     PlayEntityPositionAndRotation, 0x2A, Play, ClientBound => PlayEntityPositionAndRotationSpec {
         entity_id: VarInt,
-        delta_x: i16,
-        delta_y: i16,
-        delta_z: i16,
-        yaw: Angle,
-        pitch: Angle,
+        delta: EntityLocation<i16, Angle>,
         on_ground: bool
     },
     PlayEntityRotation, 0x2B, Play, ClientBound => PlayEntityRotationSpec {
         entity_id: VarInt,
-        yaw: Angle,
-        pitch: Angle,
+        rotation: EntityRotation<Angle>,
         on_ground: bool
     },
     PlayEntityMovement, 0x2C, Play, ClientBound => PlayEntityMovementSpec {
         entity_id: VarInt
     },
     PlayServerVehicleMove, 0x2D, Play, ClientBound => PlayEntityVehicleMoveSpec {
-        x: f64,
-        y: f64,
-        z: f64,
-        yaw: f32,
-        pitch: f32
+        location: EntityLocation<f64, f32>
     },
     PlayOpenBook, 0x2E, Play, ClientBound => PlayOpenBookSpec {
         hand: Hand
@@ -402,17 +360,11 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayFacePlayer, 0x35, Play, ClientBound => PlayFacePlayerSpec {
         face_kind: FacePlayerKind,
-        target_x: f64,
-        target_y: f64,
-        target_z: f64,
+        target: Vec3<f64>,
         entity: Option<FacePlayerEntityTarget>
     },
     PlayServerPlayerPositionAndLook, 0x36, Play, ClientBound => PlayServerPlayerPositionAndLookSpec {
-        x: f64,
-        y: f64,
-        z: f64,
-        yaw: f32,
-        pitch: f32,
+        location: EntityLocation<f64, f32>,
         flags: PositionAndLookFlags,
         teleport_id: VarInt
     },
@@ -422,11 +374,11 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         crafting_book_active: bool,
         smelting_book_open: bool,
         smelting_book_active: bool,
-        recipe_ids: VarIntCountedArray<String>,
+        recipe_ids: CountedArray<String, VarInt>,
         other_recipe_ids: RemainingBytes // todo
     },
     PlayDestroyEntities, 0x38, Play, ClientBound => PlayDestroyEntitiesSpec {
-        entity_ids: VarIntCountedArray<VarInt>
+        entity_ids: CountedArray<VarInt, VarInt>
     },
     PlayRemoveEntityEffect, 0x39, Play, ClientBound => PlayRemoveEntityEffectSpec {
         entity_id: VarInt,
@@ -459,8 +411,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         slot: i8
     },
     PlayUpdateViewPosition, 0x41, Play, ClientBound => PlayUpdateViewPositionSpec {
-        chunk_x: VarInt,
-        chunk_z: VarInt
+        chunk: ChunkPosition<VarInt>
     },
     PlayUpdateViewDistance, 0x42, Play, ClientBound => PlayUpdateViewDistanceSpec {
         view_distance: VarInt
@@ -479,14 +430,12 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayEntityVelocity, 0x46, Play, ClientBound => PlayEntityVelocitySpec {
         entity_id: VarInt,
-        velocity_x: i16,
-        velocity_y: i16,
-        velocity_z: i16
+        velocity: Vec3<i16>
     },
     PlayEntityEquipment, 0x47, Play, ClientBound => PlayEntityEquiptmentSpec {
         entity_id: VarInt,
         slot: EquipmentSlot,
-        item: Option<Slot>
+        item: Slot
     },
     PlaySetExperience, 0x48, Play, ClientBound => PlaySetExperienceSpec {
         experience_bar: f32,
@@ -504,7 +453,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlaySetPassengers, 0x4B, Play, ClientBound => PlaySetPassengersSpec {
         entity_id: VarInt,
-        passenger_entitiy_ids: VarIntCountedArray<VarInt>
+        passenger_entitiy_ids: CountedArray<VarInt, VarInt>
     },
     PlayTeams, 0x4C, Play, ClientBound => PlayTeamsSpec {
         team_name: String,
@@ -534,9 +483,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     PlaySoundEffect, 0x52, Play, ClientBound => PlaySoundEffectSpec {
         sound_id: VarInt,
         sound_category: SoundCategory,
-        position_x: FixedInt,
-        position_y: FixedInt,
-        position_z: FixedInt,
+        position: Vec3<FixedInt>,
         volume: f32,
         pitch: f32
     },
@@ -558,22 +505,18 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayEntityTeleport, 0x57, Play, ClientBound => PlayEntityTeleportSpec {
         entity_id: VarInt,
-        x: f64,
-        y: f64,
-        z: f64,
-        yaw: Angle,
-        pitch: Angle,
+        location: EntityLocation<f64, Angle>,
         on_ground: bool
     },
     PlayAdvancements, 0x58, Play, ClientBound => PlayAdvancementsSpec {
         reset: bool,
-        mappings: VarIntCountedArray<AdvancementMappingEntrySpec>,
-        identifiers: VarIntCountedArray<String>,
-        progress: VarIntCountedArray<AdvancementProgressEntrySpec>
+        mappings: CountedArray<AdvancementMappingEntrySpec, VarInt>,
+        identifiers: CountedArray<String, VarInt>,
+        progress: CountedArray<AdvancementProgressEntrySpec, VarInt>
     },
     PlayEntityProperties, 0x59, Play, ClientBound => PlayEntityPropertiesSpec {
         entity_id: VarInt,
-        properties: IntCountedArray<EntityPropertySpec>
+        properties: CountedArray<EntityPropertySpec, i32>
     },
     PlayEntityEffect, 0x5A, Play, ClientBound => PlayEntityEffectSpec {
         entity_id: VarInt,
@@ -583,13 +526,13 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         flags: EntityEffectFlags
     },
     PlayDeclareRecipes, 0x5B, Play, ClientBound => PlayDeclareRecipesSpec {
-        recipes: VarIntCountedArray<RecipeSpec>
+        recipes: CountedArray<RecipeSpec, VarInt>
     },
     PlayTags, 0x5C, Play, ClientBound => PlayTagsSpec {
-        block_tags: VarIntCountedArray<TagSpec>,
-        item_tags: VarIntCountedArray<TagSpec>,
-        fluid_tags: VarIntCountedArray<TagSpec>,
-        entity_tags: VarIntCountedArray<TagSpec>
+        block_tags: CountedArray<TagSpec, VarInt>,
+        item_tags: CountedArray<TagSpec, VarInt>,
+        fluid_tags: CountedArray<TagSpec, VarInt>,
+        entity_tags: CountedArray<TagSpec, VarInt>
     },
 
     // play server bound
@@ -640,7 +583,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         button: i8,
         action_number: i16,
         mode: InventoryOperationMode,
-        clicked_item: Option<Slot>
+        clicked_item: Slot
     },
     PlayClientCloseWindow, 0x0A, Play, ServerBound => PlayClientCloseWindowSpec {
         window_id: u8
@@ -650,7 +593,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         data: RemainingBytes
     },
     PlayEditBook, 0x0C, Play, ServerBound => PlayEditBookSpec {
-        new_book: Option<Slot>,
+        new_book: Slot,
         is_signing: bool,
         hand: Hand
     },
@@ -665,33 +608,22 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         locked: bool
     },
     PlayPlayerPosition, 0x11, Play, ServerBound => PlayPlayerPositionSpec {
-        x: f64,
-        feet_y: f64,
-        z: f64,
+        feet_position: Vec3<f64>,
         on_ground: bool
     },
     PlayClientPlayerPositionAndRotation, 0x12, Play, ServerBound => PlayClientPlayerPositionAndRotationSpec {
-        x: f64,
-        feet_y: f64,
-        z: f64,
-        yaw: f32,
-        pitch: f32,
+        feet_location: EntityLocation<f64, f32>,
         on_ground: bool
     },
     PlayPlayerRotation, 0x13, Play, ServerBound => PlayPlayerRotationSpec {
-        yaw: f32,
-        pitch: f32,
+        rotation: EntityRotation<f32>,
         on_ground: bool
     },
     PlayPlayerMovement, 0x14, Play, ServerBound => PlayPlayerMovementSpec {
         on_ground: bool
     },
     PlayClientVehicleMove, 0x15, Play, ServerBound => PlayClientVehicleMoveSpec {
-        x: f64,
-        y: f64,
-        z: f64,
-        yaw: f32,
-        pitch: f32
+        location: EntityLocation<f64, f32>
     },
     PlaySteerBoat, 0x16, Play, ServerBound => PlaySteerBoatSpec {
         left_paddle_turning: bool,
@@ -760,7 +692,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
     },
     PlayCreativeInventoryAction, 0x26, Play, ServerBound => PlayCreativeInventoryActionSpec {
         slot: i16,
-        clicked_item: Option<Slot>
+        clicked_item: Slot
     },
     PlayUpdateJigsawBlock, 0x27, Play, ServerBound => PlayUpdateJigsawBlockSpec {
         location: IntPosition,
@@ -773,12 +705,8 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         action: UpdateStructureBlockAction,
         mode: UpdateStructureBlockMode,
         name: String,
-        offset_x: i8,
-        offset_y: i8,
-        offset_z: i8,
-        size_x: i8,
-        size_y: i8,
-        size_z: i8,
+        offset: Vec3<i8>,
+        size: Vec3<i8>,
         mirror: UpdateStructureBlockMirror,
         rotation: UpdateStructureBlockRotation,
         metadata: String,
@@ -803,9 +731,7 @@ define_protocol!(Packet578, RawPacket578, RawPacket578Body, PacketDirection, Sta
         hand: Hand,
         location: IntPosition,
         face: DiggingFace,
-        cursor_position_x: f32,
-        cursor_position_y: f32,
-        cursor_position_z: f32,
+        cursor_position: Vec3<f32>,
         inside_block: bool
     },
     PlayUseItem, 0x2D, Play, ServerBound => PlayUseItemSpec {
@@ -820,47 +746,6 @@ proto_byte_enum!(HandshakeNextState,
     0x01 :: Status,
     0x02 :: Login
 );
-
-fn varint_to_usize(v: VarInt) -> usize {
-    v.into()
-}
-
-fn varint_from_usize(u: usize) -> VarInt {
-    u.into()
-}
-counted_array_type!(
-    VarIntCountedArray,
-    VarInt,
-    varint_to_usize,
-    varint_from_usize
-);
-
-fn i16_to_usize(v: i16) -> usize {
-    v as usize
-}
-
-fn i16_from_usize(u: usize) -> i16 {
-    u as i16
-}
-counted_array_type!(ShortCountedArray, i16, i16_to_usize, i16_from_usize);
-
-fn i32_to_usize(v: i32) -> usize {
-    v as usize
-}
-
-fn i32_from_usize(u: usize) -> i32 {
-    u as i32
-}
-counted_array_type!(IntCountedArray, i32, i32_to_usize, i32_from_usize);
-
-fn i8_to_usize(v: i8) -> usize {
-    v as usize
-}
-
-fn i8_from_usize(u: usize) -> i8 {
-    u as i8
-}
-counted_array_type!(ByteCountedArray, i8, i8_to_usize, i8_from_usize);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RemainingBytes {
@@ -990,7 +875,7 @@ proto_varint_enum!(StatisticKind,
     0x31 :: OpenShulkerBox
 );
 
-__protocol_body_def_helper!(Statistic {
+proto_struct!(Statistic {
     kind: StatisticCategory,
     value: VarInt
 });
@@ -1063,7 +948,7 @@ impl TestRandom for BlockChangeHorizontalPosition {
     }
 }
 
-__protocol_body_def_helper!(MultiBlockChangeRecord {
+proto_struct!(MultiBlockChangeRecord {
     horizontal_position: BlockChangeHorizontalPosition,
     y_coordinate: u8,
     block_id: VarInt
@@ -1097,12 +982,12 @@ proto_varint_enum!(BossBarDivision,
 );
 
 proto_byte_flag!(BossBarFlags,
-    0x01 :: darken_sky,
-    0x02 :: dragon_bar,
-    0x04 :: create_fog
+    0x01 :: is_darken_sky set_darken_sky,
+    0x02 :: is_dragon_bar set_dragon_bar,
+    0x04 :: is_create_fog set_create_fog
 );
 
-__protocol_body_def_helper!(BossBarAddSpec {
+proto_struct!(BossBarAddSpec {
     title: Chat,
     health: f32,
     color: BossBarColor,
@@ -1110,27 +995,27 @@ __protocol_body_def_helper!(BossBarAddSpec {
     flags: BossBarFlags
 });
 
-__protocol_body_def_helper!(BossBarUpdateHealthSpec { health: f32 });
+proto_struct!(BossBarUpdateHealthSpec { health: f32 });
 
-__protocol_body_def_helper!(BossBarUpdateTitleSpec { title: String });
+proto_struct!(BossBarUpdateTitleSpec { title: String });
 
-__protocol_body_def_helper!(BossBarUpdateStyleSpec {
+proto_struct!(BossBarUpdateStyleSpec {
     color: BossBarColor,
     dividers: BossBarDivision
 });
 
-__protocol_body_def_helper!(BossBarUpdateFlagsSpec {
+proto_struct!(BossBarUpdateFlagsSpec {
     flags: BossBarFlags
 });
 
-__protocol_body_def_helper!(TabCompleteMatch {
+proto_struct!(TabCompleteMatch {
     match_: String,
     tooltip: Option<Chat>
 });
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommandNodeSpec {
-    pub children_indices: VarIntCountedArray<VarInt>,
+    pub children_indices: CountedArray<VarInt, VarInt>,
     pub redirect_node: Option<VarInt>,
     pub is_executable: bool,
     pub node: CommandNode,
@@ -1186,7 +1071,7 @@ impl Serialize for CommandNodeSpec {
 impl Deserialize for CommandNodeSpec {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         let Deserialized { value: flags, data } = u8::mc_deserialize(data)?;
-        let Deserialized { value: children_indices, data } = <VarIntCountedArray<VarInt>>::mc_deserialize(data)?;
+        let Deserialized { value: children_indices, data } = <CountedArray<VarInt, VarInt>>::mc_deserialize(data)?;
         let (redirect_node, data) = if flags & 0x08 != 0 {
             let Deserialized { value: redirect_node, data } = VarInt::mc_deserialize(data)?;
             (Some(redirect_node), data)
@@ -1215,7 +1100,7 @@ impl Deserialize for CommandNodeSpec {
 #[cfg(all(test, feature = "std"))]
 impl TestRandom for CommandNodeSpec {
     fn test_gen_random() -> Self {
-        let children_indices = <VarIntCountedArray<VarInt>>::test_gen_random();
+        let children_indices = <CountedArray<VarInt, VarInt>>::test_gen_random();
         let redirect_node = <Option<VarInt>>::test_gen_random();
         let is_executable = rand::random::<bool>();
         let idx = rand::random::<usize>() % 3;
@@ -1293,7 +1178,7 @@ proto_str_enum!(SuggestionsTypeSpec,
     "minecraft:summonable_entities" :: SummonableEntities
 );
 
-__protocol_body_def_helper!(CommandLiteralNodeSpec {
+proto_struct!(CommandLiteralNodeSpec {
     name: String
 });
 
@@ -1468,15 +1353,15 @@ proto_varint_enum!(StringParserMode,
 );
 
 proto_byte_flag!(EntityParserFlags,
-    0x01 :: single_target,
-    0x02 :: players_only
+    0x01 :: is_single_target set_single_target,
+    0x02 :: is_players_only set_players_only
 );
 
 proto_byte_flag!(ScoreHolderFlags,
-    0x01 :: multiple
+    0x01 :: is_multiple set_multiple
 );
 
-__protocol_body_def_helper!(RangeParserProps {
+proto_struct!(RangeParserProps {
     decimal: bool
 });
 
@@ -1546,11 +1431,11 @@ proto_str_enum!(TeamCollisionRule,
     "never" :: Never
 );
 
-__protocol_body_def_helper!(TeamActionPlayerList {
-    entities: VarIntCountedArray<TeamMember>
+proto_struct!(TeamActionPlayerList {
+    entities: CountedArray<TeamMember, VarInt>
 });
 
-__protocol_body_def_helper!(TeamActionCreateSpec {
+proto_struct!(TeamActionCreateSpec {
     display_name: Chat,
     friendly_flags: TeamFriendlyFlags,
     tag_name_visibility: TeamTagNameVisibility,
@@ -1558,10 +1443,10 @@ __protocol_body_def_helper!(TeamActionCreateSpec {
     color: VarInt,
     prefix: Chat,
     suffix: Chat,
-    entities: VarIntCountedArray<TeamMember>
+    entities: CountedArray<TeamMember, VarInt>
 });
 
-__protocol_body_def_helper!(TeamActionUpdateInfoSpec {
+proto_struct!(TeamActionUpdateInfoSpec {
     display_name: Chat,
     friendly_flags: TeamFriendlyFlags,
     tag_name_visibility: TeamTagNameVisibility,
@@ -1572,8 +1457,8 @@ __protocol_body_def_helper!(TeamActionUpdateInfoSpec {
 });
 
 proto_byte_flag!(TeamFriendlyFlags,
-    0x01 :: allow_friendly_fire,
-    0x02 :: show_invisible_teammates
+    0x01 :: allow_friendly_fire set_friendly_fire,
+    0x02 :: show_invisible_teammates set_show_invisible_teammates
 );
 
 proto_byte_enum!(UpdateScoreAction,
@@ -1630,7 +1515,7 @@ proto_varint_enum!(TitleActionSpec,
     0x05 :: Reset
 );
 
-__protocol_body_def_helper!(TitleTimesSpec {
+proto_struct!(TitleTimesSpec {
     fade_in: i32,
     stay: i32,
     fade_out: i32
@@ -1729,12 +1614,6 @@ impl TestRandom for StopSoundSpec {
         }
     }
 }
-
-__protocol_body_def_helper!(ExplosionRecord {
-    x: i8,
-    y: i8,
-    z: i8
-});
 
 proto_byte_enum!(GameMode,
     0x00 :: Survival,
@@ -1880,10 +1759,9 @@ proto_varint_enum!(MapIconType,
     0x19 :: TreasureMarker
 );
 
-__protocol_body_def_helper!(MapIconSpec {
+proto_struct!(MapIconSpec {
     kind: MapIconType,
-    x: i8,
-    z: i8,
+    position: TopDownPosition<i8>,
     direction: i8,
     display_name: Option<Chat>
 });
@@ -1894,12 +1772,11 @@ pub enum MapColumns {
     Updated(MapColumnsSpec),
 }
 
-__protocol_body_def_helper!(MapColumnsSpec {
+proto_struct!(MapColumnsSpec {
     columns: u8,
     rows: u8,
-    x: u8,
-    z: u8,
-    data: VarIntCountedArray<u8>
+    position: TopDownPosition<u8>,
+    data: CountedArray<u8, VarInt>
 });
 
 impl Serialize for MapColumns {
@@ -1937,7 +1814,13 @@ impl From<Option<MapColumnsSpec>> for MapColumns {
     fn from(other: Option<MapColumnsSpec>) -> Self {
         use MapColumns::*;
         match other {
-            Some(body) => Updated(body),
+            Some(body) => {
+                if body.columns == 0 {
+                    NoUpdates
+                } else {
+                    Updated(body)
+                }
+            },
             None => NoUpdates,
         }
     }
@@ -1950,10 +1833,10 @@ impl TestRandom for MapColumns {
     }
 }
 
-__protocol_body_def_helper!(TradeSpec {
-    input_item_1: Option<Slot>,
-    output_item: Option<Slot>,
-    input_item_2: Option<Slot>,
+proto_struct!(TradeSpec {
+    input_item_1: Slot,
+    output_item: Slot,
+    input_item_2: Slot,
     trade_disabled: bool,
     trade_uses: i32,
     max_trade_uses: i32,
@@ -1995,10 +1878,10 @@ proto_varint_enum!(WindowType,
 );
 
 proto_byte_flag!(PlayerAbilityFlags,
-    0x01 :: invulnerable,
-    0x02 :: flying,
-    0x04 :: allow_flying,
-    0x08 :: instant_break
+    0x01 :: is_invulnerable set_invulnerable,
+    0x02 :: is_flying set_flying,
+    0x04 :: is_flight_allowed set_flight_allowed,
+    0x08 :: is_instant_break set_instant_break
 );
 
 proto_varint_enum!(CombatEvent,
@@ -2007,73 +1890,39 @@ proto_varint_enum!(CombatEvent,
     0x02 :: EntityDead(CombatEntityDeadSpec)
 );
 
-__protocol_body_def_helper!(CombatEndSpec {
+proto_struct!(CombatEndSpec {
     duration_ticks: VarInt,
     entity_id: i32
 });
 
-__protocol_body_def_helper!(CombatEntityDeadSpec {
+proto_struct!(CombatEntityDeadSpec {
     player_id: VarInt,
     entity_id: i32,
     message: Chat
 });
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct PlayerInfoAction<A: Clone + PartialEq + Debug> {
-    pub uuid: UUID4,
-    pub action: A,
-}
-
-impl<A> Serialize for PlayerInfoAction<A>
-    where
-        A: Serialize + Clone + PartialEq + Debug,
-{
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_other(&self.uuid)?;
-        to.serialize_other(&self.action)
-    }
-}
-
-impl<A> Deserialize for PlayerInfoAction<A>
-    where
-        A: Deserialize + Clone + PartialEq + Debug,
-{
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: uuid, data } = UUID4::mc_deserialize(data)?;
-        Ok(A::mc_deserialize(data)?.map(move |action| Self { uuid, action }))
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl<A> TestRandom for PlayerInfoAction<A>
-    where
-        A: Clone + PartialEq + Debug + TestRandom
-{
-    fn test_gen_random() -> Self {
-        Self {
-            uuid: UUID4::test_gen_random(),
-            action: A::test_gen_random(),
-        }
-    }
-}
+proto_struct!(PlayerInfoAction<A> {
+    uuid: UUID4,
+    action: A
+});
 
 proto_varint_enum!(PlayerInfoActionList,
-    0x00 :: Add(VarIntCountedArray<PlayerInfoAction<PlayerAddActionSpec>>),
-    0x01 :: UpdateGameMode(VarIntCountedArray<PlayerInfoAction<GameMode>>),
-    0x02 :: UpdateLatency(VarIntCountedArray<PlayerInfoAction<VarInt>>),
-    0x03 :: UpdateDisplayName(VarIntCountedArray<PlayerInfoAction<Option<Chat>>>),
-    0x04 :: Remove(VarIntCountedArray<UUID4>)
+    0x00 :: Add(CountedArray<PlayerInfoAction<PlayerAddActionSpec>, VarInt>),
+    0x01 :: UpdateGameMode(CountedArray<PlayerInfoAction<GameMode>, VarInt>),
+    0x02 :: UpdateLatency(CountedArray<PlayerInfoAction<VarInt>, VarInt>),
+    0x03 :: UpdateDisplayName(CountedArray<PlayerInfoAction<Option<Chat>>, VarInt>),
+    0x04 :: Remove(CountedArray<UUID4, VarInt>)
 );
 
-__protocol_body_def_helper!(PlayerAddActionSpec {
+proto_struct!(PlayerAddActionSpec {
     name: String,
-    properties: VarIntCountedArray<PlayerAddProperty>,
+    properties: CountedArray<PlayerAddProperty, VarInt>,
     game_mode: GameMode,
     ping_ms: VarInt,
     display_name: Option<Chat>
 });
 
-__protocol_body_def_helper!(PlayerAddProperty {
+proto_struct!(PlayerAddProperty {
     name: String,
     value: String,
     signature: Option<String>
@@ -2084,17 +1933,17 @@ proto_varint_enum!(FacePlayerKind,
     0x01 :: Eyes
 );
 
-__protocol_body_def_helper!(FacePlayerEntityTarget {
+proto_struct!(FacePlayerEntityTarget {
     entity_id: VarInt,
     kind: FacePlayerKind
 });
 
 proto_byte_flag!(PositionAndLookFlags,
-    0x01 :: x,
-    0x02 :: y,
-    0x04 :: z,
-    0x08 :: y_rotation,
-    0x10 :: x_rotation
+    0x01 :: is_x_rel set_x_rel,
+    0x02 :: is_y_rel set_y_rel,
+    0x04 :: is_z_rel set_z_rel,
+    0x08 :: is_y_rotation_rel set_y_rotation_rel,
+    0x10 :: is_x_rotation_rel set_x_rotation_rel
 );
 
 proto_byte_enum!(EntityEffectKind,
@@ -2135,25 +1984,24 @@ proto_byte_enum!(EntityEffectKind,
 proto_varint_enum!(WorldBorderAction,
     0x00 :: SetSize(WorldBorderSetSizeSpec),
     0x01 :: LerpSize(WorldBorderLerpSizeSpec),
-    0x02 :: SetCenter(WorldBorderSetCenterSpec),
+    0x02 :: SetCenter(TopDownPosition<f64>),
     0x03 :: Initialize(WorldBorderInitiaializeSpec),
     0x04 :: SetWarningTime(WorldBorderWarningTimeSpec),
     0x05 :: SetWarningBlocks(WorldBorderWarningBlocksSpec)
 );
 
-__protocol_body_def_helper!(WorldBorderSetSizeSpec { diameter: f64 });
+proto_struct!(WorldBorderSetSizeSpec {
+    diameter: f64
+});
 
-__protocol_body_def_helper!(WorldBorderLerpSizeSpec {
+proto_struct!(WorldBorderLerpSizeSpec {
     old_diameter: f64,
     new_diameter: f64,
     speed: VarLong
 });
 
-__protocol_body_def_helper!(WorldBorderSetCenterSpec { x: f64, z: f64 });
-
-__protocol_body_def_helper!(WorldBorderInitiaializeSpec {
-    x: f64,
-    z: f64,
+proto_struct!(WorldBorderInitiaializeSpec {
+    position: TopDownPosition<f64>,
     old_diameter: f64,
     new_diameter: f64,
     speed: VarLong,
@@ -2162,11 +2010,11 @@ __protocol_body_def_helper!(WorldBorderInitiaializeSpec {
     warning_blocks: VarInt
 });
 
-__protocol_body_def_helper!(WorldBorderWarningTimeSpec {
+proto_struct!(WorldBorderWarningTimeSpec {
     warning_time: VarInt
 });
 
-__protocol_body_def_helper!(WorldBorderWarningBlocksSpec {
+proto_struct!(WorldBorderWarningBlocksSpec {
     warning_blocks: VarInt
 });
 
@@ -2197,31 +2045,30 @@ proto_varint_enum!(ScoreboardObjectiveKind,
     0x01 :: Hearts
 );
 
-__protocol_body_def_helper!(ScoreboardObjectiveSpec {
+proto_struct!(ScoreboardObjectiveSpec {
     text: Chat,
     kind: ScoreboardObjectiveKind
 });
 
-__protocol_body_def_helper!(AdvancementMappingEntrySpec {
+proto_struct!(AdvancementMappingEntrySpec {
     key: String,
     value: AdvancementSpec
 });
 
-__protocol_body_def_helper!(AdvancementSpec {
+proto_struct!(AdvancementSpec {
     parent: Option<String>,
     display: Option<AdvancementDisplaySpec>,
-    criteria: VarIntCountedArray<String>,
-    requirements: VarIntCountedArray<VarIntCountedArray<String>>
+    criteria: CountedArray<String, VarInt>,
+    requirements: CountedArray<CountedArray<String, VarInt>, VarInt>
 });
 
-__protocol_body_def_helper!(AdvancementDisplaySpec {
+proto_struct!(AdvancementDisplaySpec {
     title: Chat,
     description: Chat,
-    icon: Option<Slot>,
+    icon: Slot,
     frame_type: AdvancementFrameType,
     flags: AdvancementDisplayFlags,
-    x: f32,
-    y: f32
+    position: Vec2<f32>
 });
 
 #[derive(Clone, Debug, PartialEq)]
@@ -2299,31 +2146,31 @@ proto_varint_enum!(AdvancementFrameType,
     0x02 :: Goal
 );
 
-__protocol_body_def_helper!(AdvancementProgressEntrySpec {
+proto_struct!(AdvancementProgressEntrySpec {
     key: String,
     value: AdvancementProgressSpec
 });
 
-__protocol_body_def_helper!(AdvancementProgressSpec {
-    criteria: VarIntCountedArray<AdvancementCriteriaSpec>
+proto_struct!(AdvancementProgressSpec {
+    criteria: CountedArray<AdvancementCriteriaSpec, VarInt>
 });
 
-__protocol_body_def_helper!(AdvancementCriteriaSpec {
+proto_struct!(AdvancementCriteriaSpec {
     identifier: String,
     progress: AdvancementCriterionProgressSpec
 });
 
-__protocol_body_def_helper!(AdvancementCriterionProgressSpec {
+proto_struct!(AdvancementCriterionProgressSpec {
     achieved_at: Option<i64>
 });
 
-__protocol_body_def_helper!(EntityPropertySpec {
+proto_struct!(EntityPropertySpec {
     key: String,
     value: f64,
-    modifiers: VarIntCountedArray<EntityPropertyModifierSpec>
+    modifiers: CountedArray<EntityPropertyModifierSpec, VarInt>
 });
 
-__protocol_body_def_helper!(EntityPropertyModifierSpec {
+proto_struct!(EntityPropertyModifierSpec {
     uuid: UUID4,
     amount: f64,
     operation: EntityPropertyModifierOperation
@@ -2336,14 +2183,14 @@ proto_byte_enum!(EntityPropertyModifierOperation,
 );
 
 proto_byte_flag!(EntityEffectFlags,
-    0x01 :: ambient,
-    0x02 :: show_particles,
-    0x04 :: show_icon
+    0x01 :: is_ambient set_ambient,
+    0x02 :: is_show_particles set_show_particles,
+    0x04 :: is_show_icon set_show_icon
 );
 
-__protocol_body_def_helper!(TagSpec {
+proto_struct!(TagSpec {
     name: String,
-    entries: VarIntCountedArray<VarInt>
+    entries: CountedArray<VarInt, VarInt>
 });
 
 proto_varint_enum!(ClientStatusAction,
@@ -2363,13 +2210,13 @@ proto_varint_enum!(ClientMainHand,
 );
 
 proto_byte_flag!(ClientDisplayedSkinParts,
-    0x01 :: cape_enabled,
-    0x02 :: jacket_enabled,
-    0x04 :: left_sleeve_enabled,
-    0x08 :: right_sleeve_enabled,
-    0x10 :: left_pants_leg_enabled,
-    0x20 :: right_pant_legs_enabled,
-    0x40 :: hat_enabled
+    0x01 :: is_cape_enabled set_cape_enabled,
+    0x02 :: is_jacket_enabled set_jacket_enabled,
+    0x04 :: is_left_sleeve_enabled set_left_sleeve_enabled,
+    0x08 :: is_right_sleeve_enabled set_right_sleeve_enabled,
+    0x10 :: is_left_pants_leg_enabled set_left_pants_leg_enabled,
+    0x20 :: is_right_pant_legs_enabled set_right_pant_legs_enabled,
+    0x40 :: is_hat_enabled set_hat_enabled
 );
 
 proto_varint_enum!(InventoryOperationMode,
@@ -2382,10 +2229,8 @@ proto_varint_enum!(InventoryOperationMode,
     0x06 :: DoubleClick
 );
 
-__protocol_body_def_helper!(InteractAtSpec {
-    target_x: f32,
-    target_y: f32,
-    target_z: f32,
+proto_struct!(InteractAtSpec {
+    target_position: Vec3<f32>,
     hand: Hand
 });
 
@@ -2396,10 +2241,10 @@ proto_varint_enum!(InteractKind,
 );
 
 proto_byte_flag!(ClientPlayerAbilities,
-    0x01 :: creative,
-    0x02 :: flying,
-    0x04 :: fly_enabled,
-    0x08 :: damaged_disabled
+    0x01 :: is_creative set_creative,
+    0x02 :: is_flying set_flying,
+    0x04 :: is_fly_enabled set_fly_enabled,
+    0x08 :: is_damaged_disabled set_damaged_disabled
 );
 
 proto_varint_enum!(PlayerDiggingStatus,
@@ -2434,8 +2279,8 @@ proto_varint_enum!(EntityActionKind,
 );
 
 proto_byte_flag!(SteerVehicleFlags,
-    0x01 :: jump,
-    0x02 :: unmount
+    0x01 :: is_jump set_jump,
+    0x02 :: is_unmount set_unmount
 );
 
 proto_varint_enum!(RecipeBookStatus,
@@ -2443,7 +2288,7 @@ proto_varint_enum!(RecipeBookStatus,
     0x01 :: States(RecipeBookStates)
 );
 
-__protocol_body_def_helper!(RecipeBookStates {
+proto_struct!(RecipeBookStates {
     crafting_book_open: bool,
     craftinb_filter_active: bool,
     smelting_book_open: bool,
@@ -2473,9 +2318,9 @@ proto_varint_enum!(CommandBlockMode,
 );
 
 proto_byte_flag!(CommandBlockFlags,
-    0x01 :: track_output,
-    0x02 :: conditional,
-    0x04 :: automatic
+    0x01 :: is_track_output set_track_output,
+    0x02 :: is_conditional set_conditional,
+    0x04 :: is_automatic set_automatic
 );
 
 proto_varint_enum!(UpdateStructureBlockAction,
@@ -2506,9 +2351,9 @@ proto_varint_enum!(UpdateStructureBlockRotation,
 );
 
 proto_byte_flag!(UpdateStructureBlockFlags,
-    0x01 :: ignore_entities,
-    0x02 :: show_air,
-    0x04 :: show_bounding_box
+    0x01 :: is_ignore_entities set_ignore_entities,
+    0x02 :: is_show_air set_show_air,
+    0x04 :: is_show_bounding_box set_show_bounding_box
 );
 
 #[derive(Clone, PartialEq, Debug)]
@@ -2577,14 +2422,14 @@ impl TestRandom for RecipeSpec {
     }
 }
 
-__protocol_body_def_helper!(RecipeIngredient {
-    items: VarIntCountedArray<Option<Slot>>
+proto_struct!(RecipeIngredient {
+    items: CountedArray<Slot, VarInt>
 });
 
-__protocol_body_def_helper!(RecipeCraftingShapelessSpec {
+proto_struct!(RecipeCraftingShapelessSpec {
     group: String,
-    ingredients: VarIntCountedArray<RecipeIngredient>,
-    result: Option<Slot>
+    ingredients: CountedArray<RecipeIngredient, VarInt>,
+    result: Slot
 });
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2593,7 +2438,7 @@ pub struct RecipeCraftingShapedSpec {
     pub height: VarInt,
     pub group: String,
     pub ingredients: Vec<RecipeIngredient>,
-    pub result: Option<Slot>,
+    pub result: Slot,
 }
 
 impl Serialize for RecipeCraftingShapedSpec {
@@ -2623,7 +2468,7 @@ impl Deserialize for RecipeCraftingShapedSpec {
             ingredients.push(elem);
         }
 
-        let Deserialized { value: result, data } = <Option<Slot>>::mc_deserialize(data)?;
+        let Deserialized { value: result, data } = Slot::mc_deserialize(data)?;
 
         Deserialized::ok(
             Self {
@@ -2658,23 +2503,23 @@ impl TestRandom for RecipeCraftingShapedSpec {
             height,
             group: String::test_gen_random(),
             ingredients,
-            result: Some(Slot::test_gen_random()),
+            result: Some(ItemStack::test_gen_random()),
         }
     }
 }
 
-__protocol_body_def_helper!(RecipeSmeltingSpec {
+proto_struct!(RecipeSmeltingSpec {
     group: String,
     ingredient: RecipeIngredient,
-    result: Option<Slot>,
+    result: Slot,
     experience: f32,
     cooking_time: VarInt
 });
 
-__protocol_body_def_helper!(RecipeStonecuttingSpec {
+proto_struct!(RecipeStonecuttingSpec {
     group: String,
     ingredient: RecipeIngredient,
-    result: Option<Slot>
+    result: Slot
 });
 
 proto_varint_enum!(RecipeUnlockAction,
@@ -2685,19 +2530,17 @@ proto_varint_enum!(RecipeUnlockAction,
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ChunkData {
-    pub chunk_x: i32,
-    pub chunk_z: i32,
+    pub position: ChunkPosition<i32>,
     pub primary_bit_mask: VarInt,
     pub heightmaps: NamedNbtTag,
     pub biomes: Option<[i32; 1024]>,
-    pub data: VarIntCountedArray<u8>,
+    pub data: CountedArray<u8, VarInt>,
     pub block_entities: Vec<NamedNbtTag>,
 }
 
 impl Serialize for ChunkData {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_other(&self.chunk_x)?;
-        to.serialize_other(&self.chunk_z)?;
+        to.serialize_other(&self.position)?;
         let full_chunk = self.biomes.is_some();
         to.serialize_other(&full_chunk)?;
         to.serialize_other(&self.primary_bit_mask)?;
@@ -2723,8 +2566,7 @@ impl Serialize for ChunkData {
 
 impl Deserialize for ChunkData {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: chunk_x, data } = i32::mc_deserialize(data)?;
-        let Deserialized { value: chunk_z, data } = i32::mc_deserialize(data)?;
+        let Deserialized { value: position, data } = <ChunkPosition<i32>>::mc_deserialize(data)?;
         let Deserialized { value: is_full_chunk, data } = bool::mc_deserialize(data)?;
         let Deserialized { value: primary_bit_mask, data } = VarInt::mc_deserialize(data)?;
         let Deserialized { value: heightmaps, mut data } = NamedNbtTag::mc_deserialize(data)?;
@@ -2739,7 +2581,7 @@ impl Deserialize for ChunkData {
         } else {
             None
         };
-        let Deserialized { value: chunk_data, data } = VarIntCountedArray::<u8>::mc_deserialize(data)?;
+        let Deserialized { value: chunk_data, data } = <CountedArray<u8, VarInt>>::mc_deserialize(data)?;
         let Deserialized { value: n_block_entities_raw, mut data } = VarInt::mc_deserialize(data)?;
         let n_block_entities = n_block_entities_raw.0 as usize;
         let mut block_entities = Vec::with_capacity(n_block_entities);
@@ -2750,8 +2592,7 @@ impl Deserialize for ChunkData {
         }
 
         Deserialized::ok(ChunkData {
-            chunk_x,
-            chunk_z,
+            position,
             primary_bit_mask,
             heightmaps,
             biomes,
@@ -2765,12 +2606,11 @@ impl Deserialize for ChunkData {
 impl TestRandom for ChunkData {
     fn test_gen_random() -> Self {
         ChunkData {
-            chunk_x: rand::random(),
-            chunk_z: rand::random(),
+            position: <ChunkPosition<i32>>::test_gen_random(),
             primary_bit_mask: VarInt::test_gen_random(),
             heightmaps: NamedNbtTag::test_gen_random(),
             biomes: None,
-            data: <VarIntCountedArray<u8>>::test_gen_random(),
+            data: <CountedArray<u8, VarInt>>::test_gen_random(),
             block_entities: vec![],
         }
     }
@@ -3090,9 +2930,9 @@ proto_varint_enum!(EntityMetadataFieldData,
     0x03 :: String(String),
     0x04 :: Chat(Chat),
     0x05 :: OptChat(Option<Chat>),
-    0x06 :: Slot(Option<Slot>),
+    0x06 :: Slot(Slot),
     0x07 :: Boolean(bool),
-    0x08 :: Rotation(EntityRotation),
+    0x08 :: Rotation(Vec3<f32>),
     0x09 :: Position(IntPosition),
     0x0A :: OptPosition(Option<IntPosition>),
     0x0B :: Direction(EntityDirection),
@@ -3105,12 +2945,6 @@ proto_varint_enum!(EntityMetadataFieldData,
     0x12 :: Pose(EntityPose)
 );
 
-__protocol_body_def_helper!(EntityRotation {
-    x: f32,
-    y: f32,
-    z: f32
-});
-
 proto_varint_enum!(EntityDirection,
     0x00 :: Down,
     0x01 :: Up,
@@ -3120,7 +2954,7 @@ proto_varint_enum!(EntityDirection,
     0x05 :: East
 );
 
-__protocol_body_def_helper!(EntityVillagerData {
+proto_struct!(EntityVillagerData {
     villager_type: VillagerType,
     villager_profession: VillagerProfession,
     level: VarInt
@@ -3197,7 +3031,7 @@ proto_varint_enum!(ParticleSpec,
     0x1D :: Composter,
     0x1E :: Heart,
     0x1F :: InstantEffect,
-    0x20 :: Item(Option<Slot>),
+    0x20 :: Item(Slot),
     0x21 :: ItemSlime,
     0x22 :: ItemSnowball,
     0x23 :: LargeSmoke,
@@ -3229,11 +3063,11 @@ proto_varint_enum!(ParticleSpec,
     0x3D :: FallingNectar
 );
 
-__protocol_body_def_helper!(BlockParticleData {
+proto_struct!(BlockParticleData {
     block_state: VarInt
 });
 
-__protocol_body_def_helper!(DustParticleData {
+proto_struct!(DustParticleData {
     red: f32,
     green: f32,
     blue: f32,

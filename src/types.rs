@@ -35,300 +35,147 @@ impl TestRandom for bool {
     }
 }
 
-// u8
-impl Serialize for u8 {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_byte(*self)
-    }
+macro_rules! def_primitive {
+    ($nam: ty, $read: ident, $write: ident) => {
+        impl Serialize for $nam {
+            fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                let data = ProtoByteOrder::$write(*self);
+                to.serialize_bytes(&data)
+            }
+        }
+
+        impl Deserialize for $nam {
+            fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+                ProtoByteOrder::$read(data)
+            }
+        }
+
+        #[cfg(all(test, feature = "std"))]
+        impl TestRandom for $nam {
+            fn test_gen_random() -> Self {
+                rand::random()
+            }
+        }
+    };
 }
 
-impl Deserialize for u8 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_ubyte(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for u8 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// i8
-impl Serialize for i8 {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_byte(*self as u8)
-    }
-}
-
-impl Deserialize for i8 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_byte(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for i8 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// u16
-impl Serialize for u16 {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = ProtoByteOrder::write_ushort(*self);
-        to.serialize_bytes(&data)
-    }
-}
-
-impl Deserialize for u16 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_ushort(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for u16 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// i16
-impl Serialize for i16 {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = ProtoByteOrder::write_short(*self);
-        to.serialize_bytes(&data)
-    }
-}
-
-impl Deserialize for i16 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_short(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for i16 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// int
-impl Serialize for i32 {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = ProtoByteOrder::write_int(*self);
-        to.serialize_bytes(&data[..])
-    }
-}
-
-impl Deserialize for i32 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_int(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for i32 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// long
-impl Serialize for i64 {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = ProtoByteOrder::write_long(*self);
-        to.serialize_bytes(&data[..])
-    }
-}
-
-impl Deserialize for i64 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_long(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for i64 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// float
-impl Serialize for f32 {
-    //noinspection ALL
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = ProtoByteOrder::write_float(*self);
-        to.serialize_bytes(&data[..])
-    }
-}
-
-impl Deserialize for f32 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_float(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for f32 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
-
-// double
-impl Serialize for f64 {
-    //noinspection ALL
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let data = ProtoByteOrder::write_double(*self);
-        to.serialize_bytes(&data[..])
-    }
-}
-
-impl Deserialize for f64 {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        ProtoByteOrder::read_double(data)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for f64 {
-    fn test_gen_random() -> Self {
-        rand::random()
-    }
-}
+def_primitive!(u8, read_ubyte, write_ubyte);
+def_primitive!(i8, read_byte, write_byte);
+def_primitive!(u16, read_ushort, write_ushort);
+def_primitive!(i16, read_short, write_short);
+def_primitive!(u32, read_uint, write_uint);
+def_primitive!(i32, read_int, write_int);
+def_primitive!(u64, read_ulong, write_ulong);
+def_primitive!(i64, read_long, write_long);
+def_primitive!(u128, read_u2long, write_u2long);
+def_primitive!(i128, read_2long, write_2long);
+def_primitive!(f32, read_float, write_float);
+def_primitive!(f64, read_double, write_double);
 
 // VAR INT AND VAR LONG
-const VAR_INT_BYTES: usize = 5;
-const VAR_LONG_BYTES: usize = 10;
+macro_rules! def_varnum {
+    ($nam: ident, $data_type: ty, $working_type: ty, $max_bytes: literal) => {
+        #[derive(Copy, Clone, PartialOrd, PartialEq, Default, Hash, Ord, Eq)]
+        pub struct $nam(pub $data_type);
 
-#[derive(Copy, Clone, PartialOrd, PartialEq, Debug, Default, Hash, Ord, Eq)]
-pub struct VarInt(pub i32);
+        impl Serialize for $nam {
+            fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                let mut out = [0u8; $max_bytes];
+                let mut v: $working_type = self.0 as $working_type;
+                let mut byte_idx = 0;
+                let mut has_more = true;
+                while has_more {
+                    if byte_idx == out.len() {
+                        panic!("tried to write too much data for {}", stringify!($nam));
+                    }
 
-impl Serialize for VarInt {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let mut data = [0u8; VAR_INT_BYTES];
-        to.serialize_bytes(serialize_var_num((self.0 as u32) as u64, &mut data))
-    }
-}
+                    let mut v_byte = (v & 0x7F) as u8;
+                    v >>= 7;
+                    has_more = v != 0;
+                    if has_more {
+                        v_byte |= 0x80;
+                    }
 
-impl Deserialize for VarInt {
-    fn mc_deserialize(orig_data: &[u8]) -> DeserializeResult<Self> {
-        Ok(deserialize_var_num(orig_data, VAR_INT_BYTES)?.map(move |v| VarInt(v as i32)))
-    }
-}
+                    out[byte_idx] = v_byte;
+                    byte_idx += 1;
+                }
 
-impl Into<i32> for VarInt {
-    fn into(self) -> i32 {
-        self.0
-    }
-}
-
-impl From<i32> for VarInt {
-    fn from(v: i32) -> Self {
-        Self(v)
-    }
-}
-
-impl Into<usize> for VarInt {
-    fn into(self) -> usize {
-        self.0 as usize
-    }
-}
-
-impl From<usize> for VarInt {
-    fn from(v: usize) -> Self {
-        Self(v as i32)
-    }
-}
-
-impl fmt::Display for VarInt {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "VarInt({})", self.0)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for VarInt {
-    fn test_gen_random() -> Self {
-        let out: i32 = rand::random();
-        Self(out)
-    }
-}
-
-#[derive(Copy, Clone, PartialOrd, PartialEq, Debug, Default, Hash, Ord, Eq)]
-pub struct VarLong(pub i64);
-
-impl Serialize for VarLong {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        let mut data = [0u8; VAR_LONG_BYTES];
-        to.serialize_bytes(serialize_var_num(self.0 as u64, &mut data))
-    }
-}
-
-impl Deserialize for VarLong {
-    fn mc_deserialize(orig_data: &[u8]) -> DeserializeResult<'_, Self> {
-        Ok(deserialize_var_num(orig_data, VAR_LONG_BYTES)?.map(move |v| VarLong(v as i64)))
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for VarLong {
-    fn test_gen_random() -> Self {
-        let out: i64 = rand::random();
-        Self(out)
-    }
-}
-
-fn serialize_var_num(data: u64, out: &mut [u8]) -> &[u8] {
-    let mut v: u64 = data;
-    let mut byte_idx = 0;
-    let mut has_more = true;
-    while has_more {
-        if byte_idx == out.len() {
-            panic!("tried to write too much data for Var num");
+                to.serialize_bytes(&out[..byte_idx])
+            }
         }
 
-        let mut v_byte = (v & 0x7F) as u8;
-        v >>= 7;
-        has_more = v != 0;
-        if has_more {
-            v_byte |= 0x80;
+        impl Deserialize for $nam {
+            fn mc_deserialize(orig_data: &[u8]) -> DeserializeResult<Self> {
+                let mut data = orig_data;
+                let mut v: $working_type = 0;
+                let mut bit_place: usize = 0;
+                let mut i: usize = 0;
+                let mut has_more = true;
+
+                while has_more {
+                    if i == $max_bytes {
+                        return DeserializeErr::VarNumTooLong(Vec::from(&orig_data[..i])).into();
+                    }
+                    let Deserialized { value: byte, data: rest } = ProtoByteOrder::read_ubyte(data)?;
+                    data = rest;
+                    has_more = byte & 0x80 != 0;
+                    v |= ((byte as $working_type) & 0x7F) << bit_place;
+                    bit_place += 7;
+                    i += 1;
+                }
+
+                Deserialized::ok(Self(v as $data_type), data)
+            }
         }
 
-        out[byte_idx] = v_byte;
-        byte_idx += 1;
-    }
-
-    &out[..byte_idx]
-}
-
-fn deserialize_var_num(orig_data: &[u8], max_bytes: usize) -> DeserializeResult<u64> {
-    let mut data = orig_data;
-    let mut v: u64 = 0;
-    let mut bit_place: usize = 0;
-    let mut i: usize = 0;
-    let mut has_more = true;
-
-    while has_more {
-        if i == max_bytes {
-            return DeserializeErr::VarNumTooLong(Vec::from(&orig_data[..i])).into();
+        impl From<$data_type> for $nam {
+            fn from(other: $data_type) -> Self {
+                Self(other)
+            }
         }
-        let Deserialized { value: byte, data: rest} = ProtoByteOrder::read_ubyte(data)?;
-        data = rest;
-        has_more = byte & 0x80 != 0;
-        v |= ((byte as u64) & 0x7F) << bit_place;
-        bit_place += 7;
-        i += 1;
-    }
 
-    Deserialized::ok(v, data)
+        impl From<$nam> for $data_type {
+            fn from(other: $nam) -> Self {
+                other.0
+            }
+        }
+
+        impl core::ops::Deref for $nam {
+            type Target = $data_type;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl fmt::Display for $nam {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+
+        impl fmt::Debug for $nam {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(stringify!($nam))?;
+                f.write_str("(")?;
+                write!(f, "{}", self.0)?;
+                f.write_str(")")?;
+                Ok(())
+            }
+        }
+
+        #[cfg(all(test, feature = "std"))]
+        impl TestRandom for $nam {
+            fn test_gen_random() -> Self {
+                let out: $data_type = rand::random();
+                Self(out)
+            }
+        }
+    }
 }
+
+def_varnum!(VarInt, i32, u32, 5);
+def_varnum!(VarLong, i64, u64, 10);
 
 // STRING
 impl Serialize for String {
@@ -603,8 +450,8 @@ impl BytesSerializer {
 }
 
 impl<T> Serialize for Option<T>
-where
-    T: Serialize,
+    where
+        T: Serialize,
 {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         match self {
@@ -618,8 +465,8 @@ where
 }
 
 impl<T> Deserialize for Option<T>
-where
-    T: Deserialize,
+    where
+        T: Deserialize,
 {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
         bool::mc_deserialize(data)?.and_then(move |is_present, data| {
@@ -634,8 +481,8 @@ where
 
 #[cfg(all(test, feature = "std"))]
 impl<T> TestRandom for Option<T>
-where
-    T: TestRandom,
+    where
+        T: TestRandom,
 {
     fn test_gen_random() -> Self {
         let is_present: bool = rand::random();
@@ -649,13 +496,13 @@ where
 
 // SLOT
 #[derive(Debug, PartialEq, Clone)]
-pub struct Slot {
+pub struct ItemStack {
     pub item_id: VarInt,
     pub item_count: i8,
     pub nbt: Option<nbt::NamedTag>,
 }
 
-impl Serialize for Slot {
+impl Serialize for ItemStack {
     fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
         to.serialize_other(&self.item_id)?;
         to.serialize_other(&self.item_count)?;
@@ -666,10 +513,10 @@ impl Serialize for Slot {
     }
 }
 
-impl Deserialize for Slot {
+impl Deserialize for ItemStack {
     fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        let Deserialized { value: item_id, data} = VarInt::mc_deserialize(data)?;
-        let Deserialized { value: item_count, data} = i8::mc_deserialize(data)?;
+        let Deserialized { value: item_id, data } = VarInt::mc_deserialize(data)?;
+        let Deserialized { value: item_count, data } = i8::mc_deserialize(data)?;
         if data.is_empty() {
             return Err(DeserializeErr::Eof);
         }
@@ -682,8 +529,7 @@ impl Deserialize for Slot {
                 data: rest,
             },
             _ => nbt::read_named_tag(data)?.map(move |tag| Some(tag)),
-        }
-        .map(move |nbt| Slot {
+        }.map(move |nbt| Self {
             item_id,
             item_count,
             nbt,
@@ -692,7 +538,7 @@ impl Deserialize for Slot {
 }
 
 #[cfg(all(test, feature = "std"))]
-impl TestRandom for Slot {
+impl TestRandom for ItemStack {
     fn test_gen_random() -> Self {
         let item_id = VarInt::test_gen_random();
         let item_count = i8::test_gen_random() % 65;
@@ -703,6 +549,292 @@ impl TestRandom for Slot {
             item_count,
             nbt,
         }
+    }
+}
+
+pub type Slot = Option<ItemStack>;
+
+macro_rules! def_vector_type {
+    ($name: ident, $($fnam: ident),+) => {
+        crate::as_item! {
+            pub struct $name<T> {
+                $(pub $fnam: T),+
+            }
+        }
+
+        impl<T> Serialize for $name<T> where T: Serialize {
+            fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+                $(
+                    to.serialize_other(&self.$fnam)?;
+                )+
+                Ok(())
+            }
+        }
+
+        impl<T> Deserialize for $name<T> where T: Deserialize {
+            fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+                $(let Deserialized { value: $fnam, data } = T::mc_deserialize(data)?;)+
+                Deserialized::ok(Self { $($fnam),+ }, data)
+            }
+        }
+
+        #[cfg(all(test, feature = "std"))]
+        impl<T> TestRandom for $name<T> where T: TestRandom {
+            fn test_gen_random() -> Self {
+                Self {
+                    $($fnam: T::test_gen_random(),)+
+                }
+            }
+        }
+
+        impl<T> Clone for $name<T> where T: Clone {
+            fn clone(&self) -> Self {
+                Self {
+                    $($fnam: self.$fnam.clone(),)+
+                }
+            }
+        }
+
+        impl<T> Copy for $name<T> where T: Copy {}
+
+        impl<T, Rhs> PartialEq<$name<Rhs>> for $name<T> where T: PartialEq<Rhs> {
+            fn eq(&self, other: &$name<Rhs>) -> bool {
+                $(self.$fnam.eq(&other.$fnam)) && +
+            }
+
+            fn ne(&self, other: &$name<Rhs>) -> bool {
+                $(self.$fnam.ne(&other.$fnam)) || +
+            }
+        }
+
+        impl<T> core::hash::Hash for $name<T> where T: core::hash::Hash {
+            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+                $(self.$fnam.hash(state);)+
+            }
+        }
+
+        impl<T> fmt::Debug for $name<T> where T: fmt::Debug {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(stringify!($name))?;
+                f.write_str("( ")?;
+                $(
+                    f.write_str(stringify!($fnam))?;
+                    f.write_str("=")?;
+                    self.$fnam.fmt(f)?;
+                    f.write_str(" ")?;
+                )+
+                f.write_str(")")?;
+                Ok(())
+            }
+        }
+
+        impl<T> fmt::Display for $name<T> where T: fmt::Display {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(stringify!($name))?;
+                f.write_str("( ")?;
+                $(
+                    f.write_str(stringify!($fnam))?;
+                    f.write_str("=")?;
+                    self.$fnam.fmt(f)?;
+                    f.write_str(" ")?;
+                )+
+                f.write_str(")")?;
+                Ok(())
+            }
+        }
+
+        impl<T> From<$name<T>> for ($(crate::instead_of_ident!($fnam, T)),+) {
+            fn from(other: $name<T>) -> Self {
+                ($(other.$fnam),+)
+            }
+        }
+
+        impl<'a, T> From<&'a $name<T>> for ($(&'a crate::instead_of_ident!($fnam, T)),+) {
+            fn from(other: &'a $name<T>) -> Self {
+                ($(&other.$fnam),+)
+            }
+        }
+
+        impl<'a, T> From<&'a $name<T>> for ($(crate::instead_of_ident!($fnam, T)),+) where T: Clone {
+            fn from(other: &'a $name<T>) -> Self {
+                ($(other.$fnam.clone()),+)
+            }
+        }
+
+        impl<T> From<($(crate::instead_of_ident!($fnam, T)),+)> for $name<T> {
+            fn from(other: ($(crate::instead_of_ident!($fnam, T)),+)) -> Self {
+                let ($($fnam),+) = other;
+                Self { $($fnam),+ }
+            }
+        }
+
+        impl<'a, T> From<&'a ($(crate::instead_of_ident!($fnam, T)),+)> for $name<T> where T: Clone {
+            fn from(other: &'a ($(crate::instead_of_ident!($fnam, T)),+)) -> Self {
+                let ($($fnam),+) = other;
+                $(let $fnam = $fnam.clone();)+
+                Self { $($fnam),+ }
+            }
+        }
+
+        impl<'a, T> From<($(&'a crate::instead_of_ident!($fnam, T)),+)> for $name<T> where T: Clone {
+            fn from(other: ($(&'a crate::instead_of_ident!($fnam, T)),+)) -> Self {
+                let ($($fnam),+) = other;
+                $(let $fnam = $fnam.clone();)+
+                Self { $($fnam),+ }
+            }
+        }
+
+        impl<T> $name<T> {
+            pub fn from_other<O>(other: O) -> Self where O: Into<($(crate::instead_of_ident!($fnam, T)),+)> {
+                let ($($fnam),+) = other.into();
+                Self { $($fnam,)+ }
+            }
+
+            pub fn as_other<O>(&self) -> O where O: From<($(crate::instead_of_ident!($fnam, T)),+)>, T: Clone {
+                O::from(self.into())
+            }
+
+            pub fn into_other<O>(self) -> O where O: From<($(crate::instead_of_ident!($fnam, T)),+)> {
+                O::from(self.into())
+            }
+        }
+    };
+}
+
+def_vector_type!(Vec3, x, y, z);
+def_vector_type!(Vec2, x, y);
+def_vector_type!(ChunkPosition, x, z);
+pub type TopDownPosition<T> = ChunkPosition<T>;
+def_vector_type!(EntityRotation, yaw, pitch);
+
+proto_struct!(EntityLocation<P, R> {
+    position: Vec3<P>,
+    rotation: EntityRotation<R>
+});
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CountedArray<E, C> {
+    data: Vec<E>,
+    _counter_type: core::marker::PhantomData<C>,
+}
+
+pub trait ArrayCounter: Serialize + Deserialize {
+
+    fn as_count(&self) -> usize;
+
+    fn from_count(count: usize) -> Self;
+}
+
+impl<E, C> Serialize for CountedArray<E, C> where E: Serialize, C: ArrayCounter {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        let count = C::from_count(self.data.len());
+        to.serialize_other(&count)?;
+        for elem in &self.data {
+            to.serialize_other(elem)?;
+        }
+        Ok(())
+    }
+}
+
+impl<E, C> Deserialize for CountedArray<E, C> where E: Deserialize, C: ArrayCounter {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized { value: count, mut data } = C::mc_deserialize(data)?;
+        let count = count.as_count();
+        let mut elems = Vec::with_capacity(count);
+        for _ in 0..count {
+            let Deserialized { value: elem, data: rest } = E::mc_deserialize(data)?;
+            data = rest;
+            elems.push(elem);
+        }
+
+        Deserialized::ok(Self {
+            data: elems,
+            _counter_type: core::marker::PhantomData,
+        }, data)
+    }
+}
+
+impl<E, C> core::ops::Deref for CountedArray<E, C> where C: ArrayCounter {
+    type Target = Vec<E>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<E, C> core::ops::DerefMut for CountedArray<E, C> where C: ArrayCounter {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
+impl<E, C> From<CountedArray<E, C>> for Vec<E> where C: ArrayCounter {
+    fn from(other: CountedArray<E, C>) -> Self {
+        other.data
+    }
+}
+
+impl<E, C> From<Vec<E>> for CountedArray<E, C> where C: ArrayCounter {
+    fn from(data: Vec<E>) -> Self {
+        Self {
+            data,
+            _counter_type: core::marker::PhantomData,
+        }
+    }
+}
+
+#[cfg(all(test, feature = "std"))]
+impl<E, C> TestRandom for CountedArray<E, C>
+    where E: TestRandom, C: ArrayCounter
+{
+    fn test_gen_random() -> Self {
+        let elem_count: usize = rand::random::<usize>() % 32;
+        let mut out = Vec::with_capacity(elem_count);
+        for _ in 0..elem_count {
+            out.push(E::test_gen_random());
+        }
+
+        out.into()
+    }
+}
+
+impl ArrayCounter for VarInt {
+    fn as_count(&self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_count(count: usize) -> Self {
+        Self(count as i32)
+    }
+}
+
+impl ArrayCounter for i16 {
+    fn as_count(&self) -> usize {
+        (*self) as usize
+    }
+
+    fn from_count(count: usize) -> Self {
+        count as i16
+    }
+}
+
+impl ArrayCounter for i32 {
+    fn as_count(&self) -> usize {
+        (*self) as usize
+    }
+
+    fn from_count(count: usize) -> Self {
+        count as i32
+    }
+}
+
+impl ArrayCounter for i8 {
+    fn as_count(&self) -> usize {
+        (*self) as usize
+    }
+
+    fn from_count(count: usize) -> Self {
+        count as i8
     }
 }
 
@@ -815,7 +947,7 @@ mod tests {
             root: nbt::Tag::Compound(alloc::vec![
                 nbt::Tag::String("test 123".to_owned()).with_name("abc 123")
             ])
-            .with_name("root"),
+                .with_name("root"),
         })
     }
 
