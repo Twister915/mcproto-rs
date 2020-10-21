@@ -2,6 +2,7 @@ use alloc::{string::String, fmt};
 
 pub enum SerializeErr {
     FailedJsonEncode(String),
+    CannotSerialize(String),
 }
 
 impl fmt::Display for SerializeErr {
@@ -10,6 +11,9 @@ impl fmt::Display for SerializeErr {
         match self {
             FailedJsonEncode(data) => {
                 f.write_fmt(format_args!("failed to serialize json: {:?}", data))
+            }
+            CannotSerialize(message) => {
+                f.write_fmt(format_args!("cannot serialize value, invalid representation: {:?}", message))
             }
         }
     }

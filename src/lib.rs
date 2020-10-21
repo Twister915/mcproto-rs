@@ -15,6 +15,7 @@ pub mod types;
 pub mod utils;
 pub mod uuid;
 pub mod v1_15_2;
+pub mod v1_16_3;
 mod chat;
 mod byte_order;
 
