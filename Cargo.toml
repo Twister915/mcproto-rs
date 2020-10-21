@@ -20,7 +20,10 @@ default-features = false
 flate2 = "1.0.17"
 
 [features]
-default = [ "std", "bench" ]
+default = [ "std", "bench", "v1_15_2", "v1_16_3" ]
 
 std = [ "rand" ]
 bench = []
+
+v1_15_2 = []
+v1_16_3 = []
