@@ -10,6 +10,7 @@ pub use super::chat::*;
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 use crate::byte_order::{ProtoByteOrder, ByteOrder};
+use std::ops::Deref;
 
 // bool
 impl Serialize for bool {
@@ -835,6 +836,67 @@ impl ArrayCounter for i8 {
 
     fn from_count(count: usize) -> Self {
         count as i8
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RemainingBytes {
+    pub data: Vec<u8>,
+}
+
+impl Serialize for RemainingBytes {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        to.serialize_bytes(self.data.as_slice())
+    }
+}
+
+impl Deserialize for RemainingBytes {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        Deserialized::ok(
+            RemainingBytes {
+                data: Vec::from(data),
+            },
+            &[],
+        )
+    }
+}
+
+impl Into<Vec<u8>> for RemainingBytes {
+    fn into(self) -> Vec<u8> {
+        self.data
+    }
+}
+
+impl From<Vec<u8>> for RemainingBytes {
+    fn from(data: Vec<u8>) -> Self {
+        Self { data }
+    }
+}
+
+impl core::ops::Deref for RemainingBytes {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl core::ops::DerefMut for RemainingBytes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
+#[cfg(all(test, feature = "std"))]
+impl TestRandom for RemainingBytes {
+    fn test_gen_random() -> Self {
+        let size: usize = rand::random::<usize>() % 256;
+        let mut out = Vec::with_capacity(size);
+        for _ in 0..size {
+            out.push(rand::random());
+        }
+
+        Self { data: out }
     }
 }
 

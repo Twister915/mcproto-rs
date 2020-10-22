@@ -710,53 +710,6 @@ proto_byte_enum!(HandshakeNextState,
     0x02 :: Login
 );
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct RemainingBytes {
-    pub data: Vec<u8>,
-}
-
-impl Serialize for RemainingBytes {
-    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
-        to.serialize_bytes(self.data.as_slice())
-    }
-}
-
-impl Deserialize for RemainingBytes {
-    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
-        Deserialized::ok(
-            RemainingBytes {
-                data: Vec::from(data),
-            },
-            &[],
-        )
-    }
-}
-
-impl Into<Vec<u8>> for RemainingBytes {
-    fn into(self) -> Vec<u8> {
-        self.data
-    }
-}
-
-impl From<Vec<u8>> for RemainingBytes {
-    fn from(data: Vec<u8>) -> Self {
-        Self { data }
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
-impl TestRandom for RemainingBytes {
-    fn test_gen_random() -> Self {
-        let size: usize = rand::random::<usize>() % 256;
-        let mut out = Vec::with_capacity(size);
-        for _ in 0..size {
-            out.push(rand::random());
-        }
-
-        Self { data: out }
-    }
-}
-
 proto_byte_enum!(CardinalDirection,
     0x00 :: South,
     0x01 :: West,

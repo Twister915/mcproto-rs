@@ -76,7 +76,7 @@ struct TraditionalParser {
 
 impl TraditionalParser {
 
-    fn new(source: &str, translate_colorcodes: bool) -> TraditionalParser {
+    fn new(source: &str, translate_colorcodes: bool) -> Self {
         Self {
             source: source.chars().collect(),
             at: 0,
@@ -510,50 +510,25 @@ impl<'de> Deserialize<'de> for ChatClickEvent {
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, <A as MapAccess<'de>>::Error> where
                 A: MapAccess<'de>
             {
-                let mut action: Option<&str> = None;
-                let mut value: Option<Value> = None;
-                while action.is_none() || value.is_none() {
-                    if let Some(key) = map.next_key()? {
-                        match key {
-                            "action" => {
-                                action = map.next_value()?;
-                                if action.is_none() {
-                                    return Err(A::Error::custom("none for value key=action"));
-                                }
-                            },
-                            "value" => {
-                                value = map.next_value()?;
-                                if value.is_none() {
-                                    return Err(A::Error::custom("none for value key=value"));
-                                }
-                            },
-                            other => {
-                                return Err(A::Error::custom(format!("unexpected key in event {}", other)));
-                            }
-                        }
-                    } else {
-                        return Err(A::Error::custom(format!("event needs action and value")));
-                    }
-                }
+                let (action, value) = read_event(&mut map)?;
 
                 use ChatClickEvent::*;
-                let v = value.expect("set this in while loop");
-                match action.expect("set this in while loop") {
-                    "open_url" => match v.as_str() {
+                match action {
+                    "open_url" => match value.as_str() {
                         Some(url) => Ok(OpenUrl(url.to_owned())),
-                        None => Err(A::Error::custom(format!("open_url requires string body, got {}", v)))
+                        None => Err(A::Error::custom(format!("open_url requires string body, got {}", value)))
                     },
-                    "run_command" => match v.as_str() {
+                    "run_command" => match value.as_str() {
                         Some(cmd) => Ok(RunCommand(cmd.to_owned())),
-                        None => Err(A::Error::custom(format!("run_command requires string body, got {}", v)))
+                        None => Err(A::Error::custom(format!("run_command requires string body, got {}", value)))
                     },
-                    "suggest_command" => match v.as_str() {
+                    "suggest_command" => match value.as_str() {
                         Some(cmd) => Ok(SuggestCommand(cmd.to_owned())),
-                        None => Err(A::Error::custom(format!("suggest_command requires string body, got {}", v)))
+                        None => Err(A::Error::custom(format!("suggest_command requires string body, got {}", value)))
                     },
-                    "change_page" => match v.as_i64() {
+                    "change_page" => match value.as_i64() {
                         Some(v) => Ok(ChangePage(v as i32)),
-                        None => Err(A::Error::custom(format!("change_page requires integer body, got {}", v)))
+                        None => Err(A::Error::custom(format!("change_page requires integer body, got {}", value)))
                     },
                     other => Err(A::Error::custom(format!("invalid click action kind {}", other)))
                 }
@@ -614,42 +589,17 @@ impl<'de> Deserialize<'de> for ChatHoverEvent {
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, <A as MapAccess<'de>>::Error> where
                 A: MapAccess<'de>
             {
-                let mut action: Option<&str> = None;
-                let mut value: Option<Value> = None;
-                while action.is_none() || value.is_none() {
-                    if let Some(key) = map.next_key()? {
-                        match key {
-                            "action" => {
-                                action = map.next_value()?;
-                                if action.is_none() {
-                                    return Err(A::Error::custom("none for value key=action"));
-                                }
-                            },
-                            "value" => {
-                                value = map.next_value()?;
-                                if value.is_none() {
-                                    return Err(A::Error::custom("none for value key=value"));
-                                }
-                            },
-                            other => {
-                                return Err(A::Error::custom(format!("unexpected key in event {}", other)));
-                            }
-                        }
-                    } else {
-                        return Err(A::Error::custom(format!("event needs action and value")));
-                    }
-                }
+                let (action, value) = read_event(&mut map)?;
 
                 use ChatHoverEvent::*;
-                let v = value.expect("set this in while loop");
-                match action.expect("set this in while loop") {
+                match action {
                     "show_text" => Ok(ShowText(
-                        Chat::deserialize(v.into_deserializer())
+                        Chat::deserialize(value.into_deserializer())
                             .map_err(move |err| A::Error::custom(
                                 format!("error deserializing text to show {:?}", err)))?
                             .boxed())),
-                    "show_item" => Ok(ShowItem(v)),
-                    "show_entity" => Ok(ShowEntity(v)),
+                    "show_item" => Ok(ShowItem(value)),
+                    "show_entity" => Ok(ShowEntity(value)),
                     other => Err(A::Error::custom(format!("invalid hover action kind {}", other)))
                 }
             }
@@ -1038,6 +988,40 @@ impl TestRandom for Chat {
         let str = String::test_gen_random();
         Chat::from_text(str.as_str())
     }
+}
+
+fn read_event<'de, A>(
+    access: &mut A,
+) -> Result<(&'de str, Value), <A as MapAccess<'de>>::Error>
+    where A: MapAccess<'de>
+{
+    let mut action: Option<&str> = None;
+    let mut value: Option<Value> = None;
+    while action.is_none() || value.is_none() {
+        if let Some(key) = access.next_key()? {
+            match key {
+                "action" => {
+                    action = access.next_value()?;
+                    if action.is_none() {
+                        return Err(A::Error::custom("none for value key=action"));
+                    }
+                },
+                "value" => {
+                    value = access.next_value()?;
+                    if value.is_none() {
+                        return Err(A::Error::custom("none for value key=value"));
+                    }
+                },
+                other => {
+                    return Err(A::Error::custom(format!("unexpected key in event {}", other)));
+                }
+            }
+        } else {
+            return Err(A::Error::custom(format!("event needs action and value")));
+        }
+    }
+
+    Ok((action.expect("checked"), value.expect("checked")))
 }
 
 #[cfg(test)]
