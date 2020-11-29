@@ -624,7 +624,7 @@ macro_rules! proto_byte_flag {
                 if value {
                     self.0 |= $bval;
                 } else {
-                    self.0 ^= $bval;
+                    self.0 ^= $bval & self.0;
                 }
             })+
         }
