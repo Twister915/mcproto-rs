@@ -250,7 +250,7 @@ define_protocol!(753, Packet753, RawPacket753, RawPacket753Body => {
         dimension: NamedNbtTag,
         world_name: String,
         hashed_seed: i64,
-        max_players: u8,
+        max_players: VarInt,
         view_distance: VarInt,
         reduced_debug_info: bool,
         enable_respawn_screen: bool,
