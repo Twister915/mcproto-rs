@@ -244,7 +244,7 @@ define_protocol!(753, Packet753, RawPacket753, RawPacket753Body => {
         entity_id: i32,
         is_hardcore: bool,
         gamemode: GameMode,
-        previous_gamemode: GameMode,
+        previous_gamemode: PreviousGameMode,
         worlds: CountedArray<String, VarInt>,
         dimension_codec: NamedNbtTag,
         dimension: NamedNbtTag,
@@ -1635,6 +1635,61 @@ proto_byte_enum!(GameMode,
     0x02 :: Adventure,
     0x03 :: Spectator
 );
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PreviousGameMode {
+    NoPrevious,
+    Previous(GameMode)
+}
+
+impl PreviousGameMode {
+    pub fn id(&self) -> i8 {
+        use PreviousGameMode::*;
+        match self {
+            NoPrevious => -1,
+            Previous(mode) => mode.id() as i8,
+        }
+    }
+}
+
+impl Serialize for PreviousGameMode {
+    fn mc_serialize<S: Serializer>(&self, to: &mut S) -> SerializeResult {
+        to.serialize_byte(self.id() as u8)
+    }
+}
+
+impl Deserialize for PreviousGameMode {
+    fn mc_deserialize(data: &[u8]) -> DeserializeResult<'_, Self> {
+        let Deserialized{ value: id, data } = i8::mc_deserialize(data)?;
+
+        use PreviousGameMode::*;
+        match id {
+            -1 => Deserialized::ok(NoPrevious, data),
+            other => Ok(GameMode::deserialize_with_id(other as u8, data)?.map(move |gm| Previous(gm)))
+        }
+    }
+}
+
+impl Into<Option<GameMode>> for PreviousGameMode {
+    fn into(self) -> Option<GameMode> {
+        use PreviousGameMode::*;
+        match self {
+            NoPrevious => None,
+            Previous(mode) => Some(mode),
+        }
+    }
+}
+
+#[cfg(all(test, feature = "std"))]
+impl TestRandom for PreviousGameMode {
+    fn test_gen_random() -> Self {
+        use PreviousGameMode::*;
+        match <Option<GameMode> as TestRandom>::test_gen_random() {
+            Some(gamemode) => Previous(gamemode),
+            None => NoPrevious
+        }
+    }
+}
 
 proto_byte_enum!(WinGameAction,
     0x00 :: Respawn,

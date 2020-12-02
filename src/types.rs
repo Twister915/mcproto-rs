@@ -10,7 +10,6 @@ pub use super::chat::*;
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 use crate::byte_order::{ProtoByteOrder, ByteOrder};
-use std::ops::Deref;
 
 // bool
 impl Serialize for bool {
