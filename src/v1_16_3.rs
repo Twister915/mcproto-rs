@@ -1189,7 +1189,8 @@ proto_str_enum!(SuggestionsTypeSpec,
     "minecraft:ask_server" :: AskServer,
     "minecraft:all_recipes" :: AllRecipes,
     "minecraft:available_sounds" :: AvailableSounds,
-    "minecraft:summonable_entities" :: SummonableEntities
+    "minecraft:summonable_entities" :: SummonableEntities,
+    "minecraft:available_biomes" :: AvailableBiomes
 );
 
 proto_struct!(CommandLiteralNodeSpec {
