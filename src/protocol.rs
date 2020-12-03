@@ -1,5 +1,5 @@
 use crate::{Deserialize, DeserializeErr, Serialize, Serializer, SerializeResult};
-use alloc::{string::String, fmt, vec::Vec};
+use alloc::{string::String, fmt, vec::Vec, borrow::ToOwned};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PacketDirection {
