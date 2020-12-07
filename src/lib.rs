@@ -1,4 +1,5 @@
 #![cfg_attr(feature = "bench", feature(test))]
+#![cfg_attr(feature = "gat", feature(generic_associated_types))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;

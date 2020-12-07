@@ -24,6 +24,7 @@ default = [ "std", "bench", "v1_15_2", "v1_16_3" ]
 
 std = [ "rand" ]
 bench = []
+gat = []
 
 v1_15_2 = []
 v1_16_3 = []

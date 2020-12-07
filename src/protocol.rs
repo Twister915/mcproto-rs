@@ -94,6 +94,14 @@ pub trait HasPacketKind {
 }
 
 pub trait PacketKind: HasPacketId + Clone + Copy + PartialEq + Eq {
+
+    #[cfg(feature = "gat")]
+    type RawPacket<'a>: RawPacket<'a>;
+
+    fn from_id(id: Id) -> Option<Self>;
+
+    #[cfg(feature = "gat")]
+    fn with_body_data<'a>(self, body: &'a [u8]) -> Self::RawPacket<'a>;
 }
 
 pub trait HasPacketId {
@@ -351,6 +359,7 @@ macro_rules! define_protocol {
             type Packet = $packett;
 
             fn create(id: crate::protocol::Id, data: &'a[u8]) -> Result<Self, crate::protocol::PacketErr> {
+                use crate::protocol::PacketKind;
                 if let Some(kind) = $kindt::from_id(id) {
                     Ok(kind.with_body_data(data))
                 } else {
@@ -419,15 +428,32 @@ macro_rules! define_protocol {
             }
         }
 
-        impl $kindt {
-            pub fn from_id(id: crate::protocol::Id) -> Option<Self> {
+        impl crate::protocol::PacketKind for $kindt {
+            #[cfg(feature = "gat")]
+            type RawPacket<'a> = $rawpackett<'a>;
+
+            fn from_id(id: crate::protocol::Id) -> Option<Self> {
                 match (id.id, id.state, id.direction) {
                     $(($id, crate::protocol::State::$state, crate::protocol::PacketDirection::$direction) => Some($kindt::$nam)),*,
                     _ => None
                 }
             }
 
+            #[cfg(feature = "gat")]
+            fn with_body_data<'a>(self, data: &'a [u8]) -> Self::RawPacket<'a> {
+                self.with_body_data_inner(data)
+            }
+        }
+
+        #[cfg(not(feature = "gat"))]
+        impl $kindt {
             pub fn with_body_data<'a>(self, data: &'a [u8]) -> $rawpackett<'a> {
+                self.with_body_data_inner(data)
+            }
+        }
+
+        impl $kindt {
+            fn with_body_data_inner<'a>(self, data: &'a [u8]) -> $rawpackett<'a> {
                 match self {
                     $($kindt::$nam => $rawpackett::$nam($rawdt{
                         data,
@@ -436,8 +462,6 @@ macro_rules! define_protocol {
                 }
             }
         }
-
-        impl crate::protocol::PacketKind for $kindt {}
 
         $($crate::proto_struct!($body { $($fnam: $ftyp),* });)*
     };
