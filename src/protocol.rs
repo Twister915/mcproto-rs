@@ -98,8 +98,6 @@ pub trait PacketKind: HasPacketId + Clone + Copy + PartialEq + Eq {
     #[cfg(feature = "gat")]
     type RawPacket<'a>: RawPacket<'a>;
 
-    type Packet: Packet;
-
     fn from_id(id: Id) -> Option<Self>;
 
     #[cfg(feature = "gat")]
@@ -433,8 +431,6 @@ macro_rules! define_protocol {
         impl crate::protocol::PacketKind for $kindt {
             #[cfg(feature = "gat")]
             type RawPacket<'a> = $rawpackett<'a>;
-
-            type Packet = $packett;
 
             fn from_id(id: crate::protocol::Id) -> Option<Self> {
                 match (id.id, id.state, id.direction) {
