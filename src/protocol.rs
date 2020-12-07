@@ -87,6 +87,15 @@ pub struct ProtocolPacketField {
     pub kind: String,
 }
 
+pub trait HasPacketKind {
+    type Kind: PacketKind;
+
+    fn kind(&self) -> Self::Kind;
+}
+
+pub trait PacketKind: HasPacketId + Clone + Copy + PartialEq + Eq {
+}
+
 pub trait HasPacketId {
 
     fn id(&self) -> Id;
@@ -237,7 +246,7 @@ macro_rules! proto_struct {
 
 #[macro_export]
 macro_rules! define_protocol {
-    ($version: literal, $packett: ident, $rawpackett: ident, $rawdt: ident => {
+    ($version: literal, $packett: ident, $rawpackett: ident, $rawdt: ident, $kindt: ident => {
         $($nam: ident, $id: literal, $state: ident, $direction: ident => $body: ident {
             $($fnam: ident: $ftyp: ty),* }),*
         }
@@ -256,19 +265,30 @@ macro_rules! define_protocol {
             }
         }
 
+        $crate::as_item! {
+            #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+            pub enum $kindt {
+                $($nam),*,
+            }
+        }
+
+        impl crate::protocol::HasPacketKind for $packett {
+            type Kind = $kindt;
+
+            fn kind(&self) -> Self::Kind {
+                match self {
+                    $($packett::$nam(_) => $kindt::$nam),*,
+                }
+            }
+        }
+
         impl crate::protocol::HasPacketId for $packett {
             fn version() -> crate::types::VarInt {
                 crate::types::VarInt($version)
             }
 
             fn id(&self) -> crate::protocol::Id {
-                use self::$packett::*;
-                use crate::protocol::State::*;
-                use crate::protocol::PacketDirection::*;
-
-                match self {
-                    $($nam(_) => ($id, $state, $direction)),*
-                }.into()
+                crate::protocol::HasPacketKind::kind(self).id()
             }
         }
 
@@ -306,15 +326,19 @@ macro_rules! define_protocol {
             }
         }
 
+        impl<'a> crate::protocol::HasPacketKind for $rawpackett<'a> {
+            type Kind = $kindt;
+
+            fn kind(&self) -> Self::Kind {
+                match self {
+                    $($rawpackett::$nam(_) => $kindt::$nam),*,
+                }
+            }
+        }
+
         impl<'a> crate::protocol::HasPacketId for $rawpackett<'a> {
             fn id(&self) -> crate::protocol::Id {
-                use self::$rawpackett::*;
-                use crate::protocol::State::*;
-                use crate::protocol::PacketDirection::*;
-
-                match self {
-                    $($nam(_) => ($id, $state, $direction)),*
-                }.into()
+                crate::protocol::HasPacketKind::kind(self).id()
             }
 
             fn version() -> crate::types::VarInt {
@@ -327,17 +351,10 @@ macro_rules! define_protocol {
             type Packet = $packett;
 
             fn create(id: crate::protocol::Id, data: &'a[u8]) -> Result<Self, crate::protocol::PacketErr> {
-                use self::$rawpackett::*;
-                use crate::protocol::State::*;
-                use crate::protocol::PacketDirection::*;
-                use crate::protocol::PacketErr::UnknownId;
-
-                match (id.id, id.state, id.direction) {
-                    $(($id, $state, $direction) => Ok($nam($rawdt{
-                        data,
-                        _typ: core::marker::PhantomData,
-                    }))),*,
-                    other => Err(UnknownId(other.into()))
+                if let Some(kind) = $kindt::from_id(id) {
+                    Ok(kind.with_body_data(data))
+                } else {
+                    Err(crate::protocol::PacketErr::UnknownId(id))
                 }
             }
 
@@ -385,6 +402,42 @@ macro_rules! define_protocol {
                 }
             }
         }
+
+        impl crate::protocol::HasPacketId for $kindt {
+            fn id(&self) -> crate::protocol::Id {
+                use self::$kindt::*;
+                use crate::protocol::State::*;
+                use crate::protocol::PacketDirection::*;
+
+                match self {
+                    $($nam => ($id, $state, $direction)),*
+                }.into()
+            }
+
+            fn version() -> crate::types::VarInt {
+                crate::types::VarInt($version)
+            }
+        }
+
+        impl $kindt {
+            pub fn from_id(id: crate::protocol::Id) -> Option<Self> {
+                match (id.id, id.state, id.direction) {
+                    $(($id, crate::protocol::State::$state, crate::protocol::PacketDirection::$direction) => Some($kindt::$nam)),*,
+                    _ => None
+                }
+            }
+
+            pub fn with_body_data<'a>(self, data: &'a [u8]) -> $rawpackett<'a> {
+                match self {
+                    $($kindt::$nam => $rawpackett::$nam($rawdt{
+                        data,
+                        _typ: core::marker::PhantomData,
+                    })),*,
+                }
+            }
+        }
+
+        impl crate::protocol::PacketKind for $kindt {}
 
         $($crate::proto_struct!($body { $($fnam: $ftyp),* });)*
     };

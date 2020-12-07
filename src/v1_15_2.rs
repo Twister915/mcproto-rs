@@ -6,7 +6,7 @@ use fmt::Debug;
 #[cfg(all(test, feature = "std"))]
 use crate::protocol::TestRandom;
 
-define_protocol!(578, Packet578, RawPacket578, RawPacket578Body => {
+define_protocol!(578, Packet578, RawPacket578, RawPacket578Body, Packet578Kind => {
     // handshaking
     Handshake, 0x00, Handshaking, ServerBound => HandshakeSpec {
         version: VarInt,
