@@ -116,7 +116,7 @@ impl<'de> Deserialize<'de> for StatusFaviconSpec {
             fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
                 // favicon syntax data:{content-type};base64,{}
                 let v = str_tag(v, "data:", &self)?;
-                let content_type = str_until_pat(v, ";", &self)?;
+                let (content_type, v) = str_until_pat(v, ";", &self)?;
                 let rest = str_tag(v, "base64,", &self)?;
                 match base64::decode(rest) {
                     Ok(data) => {
@@ -156,7 +156,7 @@ fn str_until_pat<'a, E, V>(
     target: &'a str,
     pat: &str,
     v: &V,
-) -> Result<&'a str, E> where
+) -> Result<(&'a str, &'a str), E> where
     E: serde::de::Error,
     V: serde::de::Visitor<'a>
 {
@@ -168,7 +168,7 @@ fn str_until_pat<'a, E, V>(
     for i in 0..=(target.len()-n_pat) {
         let v = &target[i..i+n_pat];
         if v == pat {
-            return Ok(&target[..i]);
+            return Ok((&target[..i], &target[i+1..]));
         }
     }
 
