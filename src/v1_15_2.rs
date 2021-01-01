@@ -2449,7 +2449,7 @@ pub struct ChunkData {
     pub position: ChunkPosition<i32>,
     pub primary_bit_mask: VarInt,
     pub heightmaps: NamedNbtTag,
-    pub biomes: Option<[i32; 1024]>,
+    pub biomes: Option<Box<[i32; 1024]>>,
     pub data: CountedArray<u8, VarInt>,
     pub block_entities: Vec<NamedNbtTag>,
 }
@@ -2464,7 +2464,7 @@ impl Serialize for ChunkData {
 
         if full_chunk {
             let biomes = self.biomes.as_ref().unwrap();
-            for elem in biomes {
+            for elem in biomes.iter() {
                 to.serialize_other(elem)?;
             }
         }
@@ -2511,7 +2511,7 @@ impl Deserialize for ChunkData {
             position,
             primary_bit_mask,
             heightmaps,
-            biomes,
+            biomes: biomes.map(move |b| Box::new(b)),
             data: chunk_data,
             block_entities,
         }, data)
