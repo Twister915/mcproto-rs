@@ -13,7 +13,7 @@ use crate::protocol::TestRandom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct StatusSpec {
-    pub version: StatusVersionSpec,
+    pub version: Option<StatusVersionSpec>,
     pub players: StatusPlayersSpec,
     pub description: Chat,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -47,10 +47,10 @@ impl McDeserialize for StatusSpec {
 impl TestRandom for StatusSpec {
     fn test_gen_random() -> Self {
         Self {
-            version: StatusVersionSpec {
+            version: Some(StatusVersionSpec {
                 protocol: rand::random(),
                 name: String::test_gen_random(),
-            },
+            }),
             players: StatusPlayersSpec {
                 sample: Vec::default(),
                 max: rand::random(),
@@ -118,7 +118,7 @@ impl<'de> Deserialize<'de> for StatusFaviconSpec {
                 let v = str_tag(v, "data:", &self)?;
                 let (content_type, v) = str_until_pat(v, ";", &self)?;
                 let rest = str_tag(v, "base64,", &self)?;
-                match base64::decode(rest) {
+                match base64::decode(rest.replace('\n', "")) {
                     Ok(data) => {
                         Ok(StatusFaviconSpec{
                             data,

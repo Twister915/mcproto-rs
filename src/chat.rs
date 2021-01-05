@@ -973,7 +973,7 @@ impl super::Deserialize for Chat {
         String::mc_deserialize(data)?.try_map(move |raw| {
             serde_json::from_str(raw.as_str()).map_err(move |err|
                 super::DeserializeErr::FailedJsonDeserialize(format!(
-                    "failed to serialize chat as JSON :: {:?}", err
+                    "failed to deserialize chat from JSON '{}' :: {:?}", raw, err
                 )))
         })
     }
