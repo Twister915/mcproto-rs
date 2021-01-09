@@ -9,6 +9,12 @@ To implement your own protocol, consult this example, and use the macros to defi
 
 More documentation to come, just dumping the code since I finished it.
 
+Usage:
+```toml
+[dependencies]
+mcproto-rs = "0.2.0"
+```
+
 ## `#![no_std]`
 
 You can use this crate without the standard library (but requiring `alloc`) by setting `default-features = false` in 
