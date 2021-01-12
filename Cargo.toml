@@ -1,6 +1,6 @@
 [package]
 name = "mcproto-rs"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Joey Sacchini <joey@sacchini.net>"]
 edition = "2018"
 license = "Apache-2.0"
