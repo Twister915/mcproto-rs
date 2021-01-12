@@ -27,7 +27,7 @@ impl Chat {
         }
     }
 
-    pub fn siblings(&self) -> &Vec<BoxedChat> {
+    pub fn siblings(&self) -> &Vec<Chat> {
         &self.base().extra
     }
 
@@ -215,7 +215,7 @@ impl TraditionalParser {
         if n_components > 0 {
             top_level.base.extra.extend(
                 self.done.into_iter()
-                    .map(move |component| Chat::Text(component).boxed()));
+                    .map(move |component| Chat::Text(component)));
         }
 
         Chat::Text(top_level)
@@ -268,7 +268,7 @@ pub struct BaseComponent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hover_event: Option<ChatHoverEvent>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub extra: Vec<BoxedChat>,
+    pub extra: Vec<Chat>,
 }
 
 fn should_skip_flag_field(flag: &bool) -> bool {
@@ -299,7 +299,7 @@ impl Into<BaseComponent> for JsonComponentBase {
             insertion: self.insertion,
             click_event: self.click_event,
             hover_event: self.hover_event,
-            extra: self.extra.into_iter().map(move |elem| elem.boxed()).collect(),
+            extra: self.extra,
         }
     }
 }
@@ -367,7 +367,7 @@ impl TextComponent {
 
         let mut last_had_formatters = has_formatters;
         for extra in b.extra.iter() {
-            if let Chat::Text(child) = extra.as_ref() {
+            if let Chat::Text(child) = extra {
                 match child.traditional_formatters(last_had_formatters) {
                     Some(child_fmts) => {
                         last_had_formatters = true;
@@ -425,7 +425,7 @@ impl TextComponent {
 pub struct TranslationComponent {
     pub translate: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub with: Vec<BoxedChat>,
+    pub with: Vec<Chat>,
 
     #[serde(flatten)]
     #[serde(skip_deserializing)]
@@ -887,8 +887,7 @@ impl<'de> Deserialize<'de> for Chat {
                                 for with in withs {
                                     withs_out.push(with.deserialize_any(V)
                                         .map_err(move |err| M::Error::custom(
-                                            format!("unable to parse one of the translation with entries :: {}", err)))?
-                                        .boxed());
+                                            format!("unable to parse one of the translation with entries :: {}", err)))?);
                                 }
                                 Ok(Chat::Translation(TranslationComponent{
                                     base: base.into(),
@@ -1044,11 +1043,11 @@ pub mod tests {
                             b.color = Some(ColorCode::Red);
                             b
                         },
-                    }).boxed(),
+                    }),
                     Chat::Text(TextComponent{
                         text: "this is ".to_owned(),
                         base: BaseComponent::default(),
-                    }).boxed(),
+                    }),
                     Chat::Text(TextComponent{
                         text: "yellow".to_owned(),
                         base: {
@@ -1057,7 +1056,7 @@ pub mod tests {
                             b.bold = true;
                             b
                         }
-                    }).boxed()
+                    })
                 );
                 b
             }
