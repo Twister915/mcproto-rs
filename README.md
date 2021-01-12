@@ -1,5 +1,9 @@
 # mcproto-rs
 
+[![Docs.rs docs](https://docs.rs/mcproto-rs/badge.svg)](https://docs.rs/mcproto-rs)
+[![Crates.io version](https://img.shields.io/crates/v/mcproto-rs.svg)](https://crates.io/crates/mcproto-rs)
+[![Crates.io downloads](https://img.shields.io/crates/d/mcproto-rs.svg)](https://crates.io/crates/mcproto-rs)
+
 This is an implementation of serialization and deserialization of the minecraft protocol.
 
 This crate can be used to implement any version of the minecraft protocol, and has an example implementation of version 
@@ -12,7 +16,7 @@ More documentation to come, just dumping the code since I finished it.
 Usage:
 ```toml
 [dependencies]
-mcproto-rs = "0.2.0"
+mcproto-rs = "0.2"
 ```
 
 ## `#![no_std]`
