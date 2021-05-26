@@ -173,7 +173,7 @@ define_protocol!(753, Packet753, RawPacket753, RawPacket753Body, Packet753Kind =
     },
     PlaySetSlot, 0x15, Play, ClientBound => PlaySetSlotSpec {
         window_id: u8,
-        slow: i16,
+        slot: i16,
         slot_data: Slot
     },
     PlaySetCooldown, 0x16, Play, ClientBound => PlaySetCooldownSpec {
