@@ -181,7 +181,7 @@ define_protocol!(578, Packet578, RawPacket578, RawPacket578Body, Packet578Kind =
     },
     PlaySetSlot, 0x17, Play, ClientBound => PlaySetSlotSpec {
         window_id: u8,
-        slow: i16,
+        slot: i16,
         slot_data: Slot
     },
     PlaySetCooldown, 0x18, Play, ClientBound => PlaySetCooldownSpec {
